@@ -53,7 +53,7 @@ export function Inventory() {
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-lg">
-      <h3 className="text-xl font-bold mb-4">Envanter</h3>
+      <h3 className="text-xl font-bold mb-4">{currentPlayer.name}'nin Envanteri</h3>
       <div className="grid grid-cols-2 gap-4">
         <InventorySlot type="helmet" item={currentPlayer.inventory.helmet} />
         <InventorySlot type="weapon" item={currentPlayer.inventory.weapon} />

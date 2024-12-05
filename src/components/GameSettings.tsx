@@ -1,15 +1,11 @@
 import React from 'react';
-import type { GameSettings } from '../types/game';
+import { useGameStore } from '../store/gameStore';
 
-interface GameSettingsProps {
-  settings: GameSettings;
-  onSettingsChange: (settings: GameSettings) => void;
-  onClose: () => void;
-}
+export function GameSettings() {
+  const { settings, updateSettings } = useGameStore();
 
-export function GameSettings({ settings, onSettingsChange, onClose }: GameSettingsProps) {
-  const handleChange = (key: keyof GameSettings, value: number) => {
-    onSettingsChange({
+  const handleChange = (key: keyof typeof settings, value: number) => {
+    updateSettings({
       ...settings,
       [key]: value
     });
@@ -82,7 +78,7 @@ export function GameSettings({ settings, onSettingsChange, onClose }: GameSettin
 
         <div className="mt-6 flex justify-end">
           <button
-            onClick={onClose}
+            onClick={() => useGameStore.setState({ showSettings: false })}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Kaydet ve Kapat

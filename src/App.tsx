@@ -4,6 +4,12 @@ import { GameBoard } from './components/GameBoard';
 import { GameSettings } from './components/GameSettings';
 import { BossBattle } from './components/BossBattle';
 import { Market } from './components/Market';
+import { PropertyDialog } from './components/PropertyDialog';
+import { AllianceDialog } from './components/AllianceDialog';
+import { RentPaymentDialog } from './components/RentPaymentDialog';
+import { BankruptcyDialog } from './components/BankruptcyDialog';
+import { CombatAnimation } from './components/CombatAnimation';
+import { Notification } from './components/Notification';
 import { useGameStore } from './store/gameStore';
 
 export default function App() {
@@ -12,12 +18,28 @@ export default function App() {
     showSettings,
     showBossDialog,
     showMarketDialog,
+    showPropertyDialog,
+    showAllianceDialog,
+    showRentDialog,
+    showBankruptcyDialog,
+    showCombatAnimation,
+    selectedProperty,
+    rentInfo,
+    bankruptPlayer,
     players,
     settings
   } = useGameStore();
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <Notification />
+      {showCombatAnimation?.visible && (
+        <CombatAnimation
+          isVisible={showCombatAnimation.visible}
+          won={showCombatAnimation.won}
+          reward={showCombatAnimation.reward}
+        />
+      )}
       <header className="bg-blue-600 text-white py-6 mb-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold text-center">Mystical Path</h1>
@@ -45,6 +67,21 @@ export default function App() {
         {showSettings && <GameSettings />}
         {showBossDialog && <BossBattle />}
         {showMarketDialog && <Market />}
+        {showPropertyDialog && selectedProperty && <PropertyDialog property={selectedProperty} />}
+        {showAllianceDialog && <AllianceDialog onClose={() => useGameStore.setState({ showAllianceDialog: false })} />}
+        {showRentDialog && rentInfo && (
+          <RentPaymentDialog
+            property={rentInfo.property}
+            owner={rentInfo.owner}
+            player={rentInfo.player}
+          />
+        )}
+        {showBankruptcyDialog && bankruptPlayer && (
+          <BankruptcyDialog
+            playerName={bankruptPlayer.name}
+            onClose={() => useGameStore.setState({ showBankruptcyDialog: false })}
+          />
+        )}
       </main>
     </div>
   );

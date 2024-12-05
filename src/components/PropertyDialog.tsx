@@ -1,15 +1,35 @@
 import React from 'react';
+import { useGameStore } from '../store/gameStore';
 import type { Property } from '../types/game';
 
 interface PropertyDialogProps {
   property: Property;
-  playerCoins: number;
-  onClose: () => void;
-  onPurchase: (purchase: boolean) => void;
 }
 
-export function PropertyDialog({ property, playerCoins, onClose, onPurchase }: PropertyDialogProps) {
-  const canAfford = playerCoins >= property.price;
+export function PropertyDialog({ property }: PropertyDialogProps) {
+  const { players, currentPlayerIndex, purchaseProperty } = useGameStore();
+  const currentPlayer = players[currentPlayerIndex];
+  const canAfford = currentPlayer.coins >= property.price;
+
+  const handlePurchase = (purchase: boolean) => {
+    if (purchase && canAfford) {
+      purchaseProperty(property);
+    } else {
+      // If not purchasing, clear waiting flag and advance turn
+      useGameStore.setState({ 
+        showPropertyDialog: false, 
+        selectedProperty: null,
+        waitingForDecision: false,
+        currentPlayerIndex: (currentPlayerIndex + 1) % players.length
+      });
+
+      // If next player is bot, trigger bot turn
+      const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
+      if (nextPlayer.isBot) {
+        setTimeout(() => useGameStore.getState().handleBotTurn(), 1000);
+      }
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -17,7 +37,7 @@ export function PropertyDialog({ property, playerCoins, onClose, onPurchase }: P
         <h2 className="text-2xl font-bold mb-4">{property.name}</h2>
         <div className="space-y-4">
           <p className="text-gray-600">
-            Bu arsayı satın almak ister misiniz?
+            {currentPlayer.name}, bu arsayı satın almak ister misin?
           </p>
           <div className="space-y-2">
             <p><strong>Fiyat:</strong> {property.price} altın</p>
@@ -31,13 +51,13 @@ export function PropertyDialog({ property, playerCoins, onClose, onPurchase }: P
           )}
           <div className="flex justify-end space-x-4 mt-6">
             <button
-              onClick={() => onPurchase(false)}
+              onClick={() => handlePurchase(false)}
               className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
             >
               Vazgeç
             </button>
             <button
-              onClick={() => onPurchase(true)}
+              onClick={() => handlePurchase(true)}
               disabled={!canAfford}
               className={`px-4 py-2 rounded-lg ${
                 canAfford

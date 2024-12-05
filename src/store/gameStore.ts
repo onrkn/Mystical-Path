@@ -1,19 +1,17 @@
 import { create } from 'zustand';
-import type { GameState, Player, Property, Alliance, Item } from '../types/game';
-import { generateRandomItem } from '../utils/itemGenerator';
-import { calculateWinChance } from '../utils/combat';
-
-interface GameStore extends GameState {
-  initializeGame: (players: string[]) => void;
-  rollDice: () => Promise<void>;
-  purchaseProperty: (property: Property) => void;
-  upgradeProperty: (propertyId: number) => void;
-  createAlliance: (name: string, playerIds: string[]) => void;
-  equipItem: (playerId: string, item: Item) => void;
-  fightBoss: (playerId: string) => void;
-  movePlayer: (playerId: string, steps: number) => Promise<void>;
-  addToLog: (message: string) => void;
-}
+import type { GameState } from '../types/game';
+import { defaultSettings } from '../config/gameSettings';
+import { squares } from '../data/board';
+import { handlePropertyActions } from './actions/propertyActions';
+import { handleMarketActions } from './actions/marketActions';
+import { handleAllianceActions } from './actions/allianceActions';
+import { handleBotActions } from './actions/botActions';
+import { handleCombatActions } from './actions/combatActions';
+import { calculateItemBonuses } from './utils/itemUtils';
+import { getBotMarketDecision } from '../utils/botAI';
+import { movePlayer } from './utils/movePlayer';
+import { handleSquareAction } from './actions/squareActions';
+import { generatePlayerColor } from '../utils/playerUtils';
 
 const initialState: GameState = {
   players: [],
@@ -28,20 +26,117 @@ const initialState: GameState = {
   showPropertyDialog: false,
   showBossDialog: false,
   showMarketDialog: false,
+  showSettings: false,
+  showAllianceDialog: false,
+  showRentDialog: false,
+  showBankruptcyDialog: false,
+  showCombatAnimation: null,
   selectedProperty: null,
   activeBoss: null,
+  settings: defaultSettings,
+  notification: null,
+  waitingForDecision: false,
+  isMoving: false,
+  rentInfo: null,
+  bankruptPlayer: null
 };
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
+  ...handlePropertyActions(set, get),
+  ...handleMarketActions(set, get),
+  ...handleAllianceActions(set, get),
+  ...handleBotActions(set, get),
+  ...handleCombatActions(set, get),
+  calculateItemBonuses,
+  getBotMarketDecision,
+  movePlayer: (playerId: string, steps: number) => movePlayer(get, set, playerId, steps),
 
-  initializeGame: (playerNames) => {
-    const players: Player[] = playerNames.map((name, index) => ({
+  rollDice: async () => {
+    const { players, currentPlayerIndex, isMoving, waitingForDecision } = get();
+    const currentPlayer = players[currentPlayerIndex];
+
+    if (!currentPlayer || isMoving || waitingForDecision || currentPlayer.isBot) {
+      return;
+    }
+
+    set({ isRolling: true });
+
+    try {
+      const roll = Math.floor(Math.random() * 6) + 1;
+      set({ lastDiceRoll: roll });
+      
+      get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll} attı.</span>`);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await get().movePlayer(currentPlayer.id, roll);
+    } catch (error) {
+      console.error('Error in rollDice:', error);
+      set({ 
+        currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+        waitingForDecision: false,
+        isRolling: false
+      });
+    }
+  },
+
+  showNotification: (notification) => {
+    set({ notification });
+    setTimeout(() => set({ notification: null }), 3000);
+  },
+
+  clearNotification: () => set({ notification: null }),
+
+  addToLog: (message: string) => {
+    const { gameLog } = get();
+    set({ gameLog: [...gameLog, message] });
+  },
+
+  updateSettings: (newSettings) => {
+    set({ settings: newSettings });
+    
+    // Update property prices and rents based on new multipliers
+    const { players } = get();
+    squares.forEach(square => {
+      if (square.property) {
+        square.property.price = Math.floor(square.property.baseRent * 5 * newSettings.propertyPriceMultiplier);
+        if (!square.property.ownerId) {
+          square.property.rent = Math.floor(square.property.baseRent * newSettings.propertyRentMultiplier);
+        }
+      }
+    });
+
+    // Update owned properties
+    players.forEach(player => {
+      player.properties.forEach(property => {
+        property.rent = Math.floor(property.baseRent * (1 + (property.level - 1) * 0.2) * newSettings.propertyRentMultiplier);
+      });
+    });
+
+    set({ players: [...players] });
+  },
+
+  initializeGame: (playerNames: string[], playerTypes: ('human' | 'bot')[]) => {
+    const { settings } = get();
+    
+    // Reset properties to their base state with current settings
+    squares.forEach(square => {
+      if (square.property) {
+        square.property.price = Math.floor(square.property.baseRent * 5 * settings.propertyPriceMultiplier);
+        square.property.rent = Math.floor(square.property.baseRent * settings.propertyRentMultiplier);
+        square.property.level = 1;
+        square.property.ownerId = null;
+      }
+    });
+
+    const players = playerNames.map((name, index) => ({
       id: `player-${index}`,
       name,
-      score: 0,
-      coins: 200,
+      isBot: playerTypes[index] === 'bot',
+      color: generatePlayerColor(index),
       position: 0,
+      coins: settings.startingMoney,
+      score: 0,
       level: 1,
       xp: 0,
       strength: 1,
@@ -49,169 +144,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
       inventory: {},
       inJail: false,
       jailTurnsLeft: 0,
-      color: `hsl(${(360 / playerNames.length) * index}, 70%, 50%)`,
+      allianceId: null,
+      startBonusCount: 0,
+      rentCollected: 0,
+      cardBonuses: 0,
+      itemSales: 0,
+      propertyPurchases: 0,
+      propertyUpgrades: 0,
+      rentPaid: 0,
+      itemPurchases: 0,
+      penalties: 0
     }));
 
-    set({ players, gameStarted: true });
-  },
-
-  rollDice: async () => {
-    set({ isRolling: true });
-    
-    const result = Math.floor(Math.random() * 6) + 1;
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const { players, currentPlayerIndex } = get();
-    const currentPlayer = players[currentPlayerIndex];
-    
-    if (currentPlayer.inJail) {
-      if (currentPlayer.jailTurnsLeft > 0) {
-        currentPlayer.jailTurnsLeft--;
-        set({
-          players,
-          isRolling: false,
-          currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
-          lastDiceRoll: result,
-          gameMessage: `${currentPlayer.name} hapishanede. Kalan tur: ${currentPlayer.jailTurnsLeft}`,
-        });
-        return;
-      } else {
-        currentPlayer.inJail = false;
-      }
-    }
-
-    await get().movePlayer(currentPlayer.id, result);
-  },
-
-  movePlayer: async (playerId, steps) => {
-    const { players } = get();
-    const playerIndex = players.findIndex(p => p.id === playerId);
-    const player = players[playerIndex];
-
-    for (let i = 0; i < steps; i++) {
-      player.position = (player.position + 1) % 30;
-      set({ players: [...players] });
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-
     set({
       players,
-      isRolling: false,
-      currentPlayerIndex: (playerIndex + 1) % players.length,
-      lastDiceRoll: steps,
-    });
-  },
-
-  purchaseProperty: (property) => {
-    const { players, currentPlayerIndex } = get();
-    const currentPlayer = players[currentPlayerIndex];
-    
-    if (currentPlayer.coins >= property.price) {
-      currentPlayer.coins -= property.price;
-      currentPlayer.properties.push(property);
-      property.ownerId = currentPlayer.id;
-      
-      set({
-        players,
-        showPropertyDialog: false,
-        gameMessage: `${currentPlayer.name} ${property.name}'yi satın aldı!`,
-      });
-    }
-  },
-
-  upgradeProperty: (propertyId) => {
-    const { players, currentPlayerIndex } = get();
-    const currentPlayer = players[currentPlayerIndex];
-    const property = currentPlayer.properties.find(p => p.id === propertyId);
-    
-    if (property && property.level < 5 && currentPlayer.coins >= property.upgradePrice) {
-      currentPlayer.coins -= property.upgradePrice;
-      property.level++;
-      property.rent = Math.floor(property.baseRent * (1 + (property.level * 0.1)));
-      property.upgradePrice = Math.floor(property.upgradePrice * 1.5);
-      
-      set({
-        players,
-        gameMessage: `${currentPlayer.name} ${property.name}'yi geliştirdi! Yeni seviye: ${property.level}`,
-      });
-    }
-  },
-
-  createAlliance: (name, playerIds) => {
-    const alliance: Alliance = {
-      id: `alliance-${Date.now()}`,
-      name,
-      memberIds: playerIds,
-      sharedGold: 0,
-    };
-
-    const { players, alliances } = get();
-    players.forEach(player => {
-      if (playerIds.includes(player.id)) {
-        player.allianceId = alliance.id;
-      }
+      gameStarted: true,
+      currentPlayerIndex: 0,
+      gameLog: ['Oyun başladı!'],
+      waitingForDecision: false,
+      isRolling: false
     });
 
-    set({
-      players,
-      alliances: [...alliances, alliance],
-      gameMessage: `${name} ittifakı kuruldu!`,
-    });
-  },
-
-  equipItem: (playerId, item) => {
-    const { players } = get();
-    const player = players.find(p => p.id === playerId);
-    
-    if (player) {
-      const oldItem = player.inventory[item.type];
-      player.inventory[item.type] = item;
-      
-      if (oldItem) {
-        player.coins += oldItem.value;
-      }
-      
-      set({
-        players,
-        gameMessage: `${player.name} ${item.name} kuşandı!`,
-      });
+    if (players[0].isBot) {
+      setTimeout(() => get().handleBotTurn(), 1500);
     }
-  },
-
-  fightBoss: (playerId) => {
-    const { players, activeBoss } = get();
-    const player = players.find(p => p.id === playerId);
-    
-    if (player && activeBoss) {
-      const winChance = calculateWinChance(player, activeBoss);
-      const won = Math.random() < winChance;
-      
-      if (won) {
-        player.coins += activeBoss.rewards.gold;
-        player.xp += activeBoss.rewards.xp;
-        if (activeBoss.rewards.item) {
-          const item = generateRandomItem('legendary');
-          player.inventory[item.type] = item;
-        }
-        
-        set({
-          players,
-          showBossDialog: false,
-          gameMessage: `${player.name} ejderhayı yendi ve ödüllerini kazandı!`,
-        });
-      } else {
-        player.coins = Math.floor(player.coins * 0.5);
-        set({
-          players,
-          showBossDialog: false,
-          gameMessage: `${player.name} ejderhaya yenildi ve altınlarının yarısını kaybetti!`,
-        });
-      }
-    }
-  },
-
-  addToLog: (message) => {
-    const { gameLog } = get();
-    set({ gameLog: [...gameLog, message] });
-  },
+  }
 }));

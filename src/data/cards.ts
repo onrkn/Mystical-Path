@@ -18,9 +18,9 @@ export const sansKartlari: Card[] = [
   {
     id: 3,
     type: 'sans',
-    title: 'Sihirli Portal',
-    description: '3 kare ileri ışınlanın!',
-    effect: { moveSteps: 3, xp: 10 }
+    title: 'Büyücü Hediyesi',
+    description: 'Büyücü size altın hediye etti!',
+    effect: { coins: 75, xp: 15 }
   },
   {
     id: 4,
@@ -49,9 +49,9 @@ export const cezaKartlari: Card[] = [
   {
     id: 3,
     type: 'ceza',
-    title: 'Lanetli Büyü',
-    description: '2 kare geri gidin!',
-    effect: { moveSteps: -2 }
+    title: 'Büyü Kazası',
+    description: 'Yanlış büyü size zarar verdi!',
+    effect: { coins: -35, xp: -10 }
   },
   {
     id: 4,

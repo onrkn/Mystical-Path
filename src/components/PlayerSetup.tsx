@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { UserPlus, Play, Bot } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
+import { generateTurkishBotName } from '../utils/generateBotNames';
 
 export function PlayerSetup() {
-  const [playerCount, setPlayerCount] = useState<number>(2);
-  const [playerNames, setPlayerNames] = useState<string[]>(['', '']);
-  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'human']);
+  const [playerCount, setPlayerCount] = useState<number>(4);
+  const [playerNames, setPlayerNames] = useState<string[]>(['', '', '', '']);
+  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'human', 'human', 'human']);
   const initializeGame = useGameStore(state => state.initializeGame);
 
   const handlePlayerCountChange = (count: number) => {
@@ -28,7 +29,7 @@ export function PlayerSetup() {
     // If bot, generate a bot name if empty
     if (newTypes[index] === 'bot' && !playerNames[index]) {
       const newNames = [...playerNames];
-      newNames[index] = `Bot ${index + 1}`;
+      newNames[index] = generateTurkishBotName();
       setPlayerNames(newNames);
     }
   };

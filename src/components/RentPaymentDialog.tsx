@@ -12,10 +12,15 @@ interface RentPaymentDialogProps {
 }
 
 export function RentPaymentDialog({ property, owner, player }: RentPaymentDialogProps) {
-  const { payRent } = useGameStore();
+  const { payRent, kingPosition } = useGameStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const bonuses = calculateItemBonuses(player);
-  const rentAmount = Math.floor(property.rent * (1 - bonuses.rentReduction));
+  
+  // Kral bu mülkte mi kontrol et
+  const isKingHere = kingPosition === property.id;
+  const baseRent = property.rent;
+  const kingMultiplier = isKingHere ? 10 : 1;
+  const rentAmount = Math.floor(baseRent * kingMultiplier * (1 - bonuses.rentReduction));
 
   const handlePayRent = () => {
     if (isProcessing) return;
@@ -45,7 +50,10 @@ export function RentPaymentDialog({ property, owner, player }: RentPaymentDialog
             </p>
             <div className="flex items-center gap-2 text-xl font-bold text-blue-600">
               <Coins className="w-6 h-6" />
-              <span>Kira: {rentAmount} altın</span>
+              <span>
+                Kira: {rentAmount} 💎
+                {isKingHere && <span className="ml-1 text-yellow-500">(x10)</span>}
+              </span>
             </div>
             {bonuses.rentReduction > 0 && (
               <p className="text-sm text-blue-600 mt-2">

@@ -1,4 +1,4 @@
-import type { Square, Boss } from '../types/game';
+import type { Square, Boss, King } from '../types/game';
 
 const boss: Boss = {
   id: 'dragon-1',
@@ -12,6 +12,13 @@ const boss: Boss = {
 };
 
 export const BOARD_SIZE = 32;
+
+export const king: King = {
+  id: 'mystical_king',
+  name: 'Mistik Kral',
+  position: 0,
+  movementInterval: 10000 // 10 saniye
+};
 
 export const squares: Square[] = [
   { id: 0, type: 'normal', name: 'Başlangıç', description: 'Başlangıç noktası' },

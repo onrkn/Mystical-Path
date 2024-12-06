@@ -33,21 +33,37 @@ const squareIcons = {
 };
 
 export function BoardSquare({ square, players }: BoardSquareProps) {
-  const { players: allPlayers } = useGameStore();
+  const { players: allPlayers, kingPosition } = useGameStore();
   const Icon = squareIcons[square.type];
   const owner = square.property?.ownerId ? allPlayers.find(p => p.id === square.property?.ownerId) : null;
+
+  const isKingOnSquare = kingPosition === square.id;
+
+  const squareStyle = {
+    position: 'relative',
+    ...(isKingOnSquare && {
+      borderWidth: '3px',
+      borderStyle: 'solid',
+      borderColor: 'gold',
+      boxShadow: '0 0 15px rgba(255,215,0,0.7)',
+      transform: 'scale(1.05)',
+      zIndex: 10
+    }),
+    ...(owner && {
+      borderColor: owner.color,
+      boxShadow: `0 0 0 2px ${owner.color}`
+    })
+  };
 
   return (
     <div 
       className={cn(
         squareColors[square.type],
         'p-2 rounded-lg relative min-h-[80px] flex flex-col items-center justify-center transition-all',
-        owner && 'ring-2'
+        owner && 'ring-2',
+        isKingOnSquare ? 'king-highlight' : ''
       )}
-      style={owner ? { 
-        borderColor: owner.color,
-        boxShadow: `0 0 0 2px ${owner.color}`
-      } : undefined}
+      style={squareStyle}
     >
       <Icon className="w-6 h-6 mb-1" />
       <div className="text-xs text-center font-medium">{square.name}</div>
@@ -90,10 +106,28 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
             </>
           ) : (
             <div className="text-gray-600">
-              Kira: {square.property.rent} 💎
+              Kira: {isKingOnSquare ? 
+                (square.property.baseRent * square.property.level * 10) : 
+                (square.property.baseRent * square.property.level)} 💎
             </div>
           )}
         </div>
+      )}
+
+      {isKingOnSquare && (
+        <div className="absolute top-0.5 left-0.5 bg-yellow-500 text-white px-0.5 py-0 text-[10px] font-semibold rounded-br-lg">
+          10x Kira
+        </div>
+      )}
+      
+      {isKingOnSquare && (
+        <div 
+          className="absolute bottom-1 left-1 w-8 h-8 bg-cover bg-center" 
+          style={{ 
+            backgroundImage: 'url(/king-sprite.svg)',
+            zIndex: 20
+          }}
+        />
       )}
     </div>
   );

@@ -1,20 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy, Coins, Star, Building2, TrendingUp, BarChart2, Swords } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { PlayerStatsModal } from './PlayerStatsModal';
 import { calculateStrength } from '../utils/playerUtils';
+import { squares } from '../data/board';
 
 export function PlayerStats() {
-  const { players, currentPlayerIndex, upgradeProperty } = useGameStore();
+  const { players, currentPlayerIndex, upgradeProperty, kingPosition } = useGameStore();
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [propertyRents, setPropertyRents] = useState<{[key: string]: number}>({});
+
+  useEffect(() => {
+    // Kral'ın bulunduğu kareyi bul
+    const kingSquare = squares.find(s => s.id === kingPosition);
+    
+    const newRents: {[key: string]: number} = {};
+    players.forEach(player => {
+      player.properties?.forEach(property => {
+        // Temel kirayı hesapla (seviye ile çarpılmış hali)
+        const baseRent = property.baseRent * property.level;
+        
+        // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
+        const isKingHere = kingSquare?.property?.id === property.id;
+        newRents[property.id] = isKingHere ? baseRent * 10 : baseRent;
+      });
+    });
+    setPropertyRents(newRents);
+  }, [kingPosition, players]);
 
   if (!players || players.length === 0) {
     return null;
   }
 
   const calculateNextRent = (property) => {
-    if (property.level >= 5) return property.rent;
-    const nextLevelRent = Math.floor(property.baseRent * (1 + ((property.level + 1) * 0.2)));
+    if (property.level >= 5) return property.baseRent * property.level;
+    const nextLevelRent = property.baseRent * (property.level + 1);
     return nextLevelRent;
   };
 
@@ -25,6 +45,8 @@ export function PlayerStats() {
         <div className="space-y-4">
           {players.map((player, index) => {
             const strength = calculateStrength(player);
+            const playerProperties = player.properties;
+
             return (
               <div
                 key={player.id}
@@ -70,42 +92,41 @@ export function PlayerStats() {
                     </div>
                   </div>
                   
-                  {player.properties && player.properties.length > 0 && (
+                  {playerProperties && playerProperties.length > 0 && (
                     <div className="mt-2">
-                      <h4 className="text-sm font-semibold mb-1 flex items-center">
-                        <Building2 className="w-4 h-4 mr-1" />
-                        Mülkler:
-                      </h4>
-                      <div className="grid grid-cols-1 gap-2">
-                        {player.properties.map((property) => (
-                          <div
-                            key={property.id}
-                            className="text-sm p-3 bg-white rounded border"
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="font-medium">{property.name}</span>
-                              <span className="text-gray-600">Seviye {property.level}</span>
-                            </div>
-                            <div className="flex justify-between text-sm text-gray-600 mb-2">
-                              <span>Mevcut Kira: {property.rent} 💎</span>
-                              {property.level < 5 && (
-                                <span className="flex items-center gap-1">
-                                  <TrendingUp className="w-4 h-4" />
-                                  {calculateNextRent(property)} 💎
-                                </span>
+                      <h3 className="text-sm font-medium mb-2">Mülkler:</h3>
+                      <div className="space-y-2">
+                        {playerProperties.map(property => {
+                          // Kral'ın bulunduğu kareyi bul
+                          const kingSquare = squares.find(s => s.id === kingPosition);
+                          // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
+                          const isKingHere = kingSquare?.property?.id === property.id;
+                          const currentRent = propertyRents[property.id] || (property.baseRent * property.level);
+
+                          return (
+                            <div key={property.id} className="bg-white p-2 rounded border text-sm">
+                              <div className="flex justify-between items-center">
+                                <span>{property.name}</span>
+                                <span className="text-gray-500">Seviye {property.level}</span>
+                              </div>
+                              <div className="text-gray-600">
+                                Kira: {currentRent} 💎
+                                {isKingHere && (
+                                  <span className="ml-1 text-yellow-500 font-bold">(x10)</span>
+                                )}
+                              </div>
+                              {index === currentPlayerIndex && !player.isBot && property.level < 5 && (
+                                <button
+                                  onClick={() => upgradeProperty(property.id)}
+                                  disabled={player.coins < property.upgradePrice}
+                                  className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-2 rounded transition-colors"
+                                >
+                                  Geliştir ({property.upgradePrice} 💰)
+                                </button>
                               )}
                             </div>
-                            {index === currentPlayerIndex && !player.isBot && property.level < 5 && (
-                              <button
-                                onClick={() => upgradeProperty(property.id)}
-                                disabled={player.coins < property.upgradePrice}
-                                className="w-full text-xs py-1.5 px-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Geliştir ({property.upgradePrice} 💰)
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

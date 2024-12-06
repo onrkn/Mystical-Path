@@ -26,7 +26,7 @@ export interface GameState {
   selectedProperty: Property | null;
   activeBoss: Boss | null;
   settings: GameSettings;
-  notification: Notification | null;
+  notifications: Notification[];
   waitingForDecision: boolean;
   isMoving: boolean;
   rentInfo: {
@@ -92,6 +92,13 @@ export interface Card {
     transferProperty?: boolean;
   };
   chance: number;
+}
+
+export interface King {
+  id: string;
+  name: string;
+  position: number;
+  movementInterval: number;
 }
 
 export type SquareType = 'normal' | 'arsa' | 'sans' | 'ceza' | 'market' | 'park' | 'bonus' | 'boss';

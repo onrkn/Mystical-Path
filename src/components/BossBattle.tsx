@@ -33,8 +33,21 @@ export function BossBattle() {
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-gray-700/50"
+        className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-gray-700/50 relative"
       >
+        {/* Arka planda kralın olduğu kareyi göster */}
+        <div className="absolute inset-0 opacity-10 flex items-center justify-center">
+          <div 
+            className="w-full h-full bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(/king-sprite.svg)`, 
+              backgroundSize: '100px',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          />
+        </div>
+
         <div className="text-center mb-6 relative">
           <motion.div
             animate={{ 

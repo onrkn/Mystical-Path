@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { GameState } from '../types/game';
 import { defaultSettings } from '../config/gameSettings';
-import { squares } from '../data/board';
 import { cezaKartlari } from '../data/cards';
 import { handlePropertyActions } from './actions/propertyActions';
 import { handleMarketActions } from './actions/marketActions';
@@ -19,8 +18,7 @@ const initialState: GameState = {
   currentPlayerIndex: 0,
   gameStarted: false,
   winner: null,
-  lastDiceRoll: 0,
-  lastDiceRoll2: 0,
+  lastDiceRoll: null,
   gameMessage: '',
   gameLog: [],
   alliances: [],
@@ -36,117 +34,15 @@ const initialState: GameState = {
   selectedProperty: null,
   activeBoss: null,
   settings: defaultSettings,
-  notification: null,
+  notifications: [],
   waitingForDecision: false,
   isMoving: false,
   rentInfo: null,
-  bankruptPlayer: null
+  bankruptPlayer: null,
+  kingPosition: 0
 };
 
-const drawPenaltyCard = (playerId: string) => {
-  const player = get().players.find(p => p.id === playerId);
-  if (!player) return;
-
-  // Kartları şanslarına göre seç
-  const random = Math.random() * 100; // 0-100 arası
-  let selectedCard = null;
-  
-  for (const card of cezaKartlari) {
-    if (card.chance > 0 && random <= card.chance) {
-      selectedCard = card;
-      break;
-    }
-  }
-
-  if (!selectedCard) {
-    selectedCard = cezaKartlari[0]; // Fallback
-  }
-
-  // Kart etkisini uygula
-  if (selectedCard.effect.transferProperty) {
-    if (player.properties.length > 0) {
-      // En zayıf oyuncuyu bul
-      const otherPlayers = get().players.filter(p => p.id !== playerId);
-      const weakestPlayers = otherPlayers.reduce((acc, curr) => {
-        if (acc.length === 0) return [curr];
-        const accStrength = acc[0].score;
-        const currStrength = curr.score;
-        if (currStrength < accStrength) return [curr];
-        if (currStrength === accStrength) return [...acc, curr];
-        return acc;
-      }, [] as typeof otherPlayers);
-
-      // Rastgele bir zayıf oyuncu seç
-      const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
-      
-      // Rastgele bir mülk seç
-      const propertyIndex = Math.floor(Math.random() * player.properties.length);
-      const property = player.properties[propertyIndex];
-
-      // Mülkü transfer et
-      set(state => {
-        const newPlayers = state.players.map(p => {
-          if (p.id === playerId) {
-            return {
-              ...p,
-              properties: p.properties.filter((_, index) => index !== propertyIndex)
-            };
-          }
-          if (p.id === targetPlayer.id) {
-            return {
-              ...p,
-              properties: [...p.properties, property]
-            };
-          }
-          return p;
-        });
-        return { ...state, players: newPlayers };
-      });
-
-      // Log mesajı
-      get().addToLog(`${player.name}: ${selectedCard.title} - ${selectedCard.description} ${property.name} mülkü ${targetPlayer.name}'e geçti!`);
-    } else {
-      // Mülk yoksa 200 altın cezası
-      set(state => {
-        const newPlayers = state.players.map(p => {
-          if (p.id === playerId) {
-            return {
-              ...p,
-              coins: p.coins - 200
-            };
-          }
-          return p;
-        });
-        return { ...state, players: newPlayers };
-      });
-
-      // Log mesajı
-      get().addToLog(`${player.name}: Mülkü olmadığı için 200 altın ceza ödedi!`);
-    }
-  } else {
-    // Normal ceza kartı etkilerini uygula
-    if (selectedCard.effect.coins) {
-      player.coins = Math.max(0, player.coins + selectedCard.effect.coins);
-    }
-    if (selectedCard.effect.score) {
-      player.score = Math.max(0, player.score + selectedCard.effect.score);
-    }
-    if (selectedCard.effect.xp) {
-      player.xp = Math.max(0, player.xp + selectedCard.effect.xp);
-    }
-
-    set(state => ({
-      ...state,
-      players: state.players.map(p => p.id === player.id ? player : p),
-      lastAction: {
-        type: 'penalty',
-        message: `${player.name} oyuncusu ${selectedCard.title} kartını çekti: ${selectedCard.description}`
-      }
-    }));
-  }
-};
-
-const applyPenaltyCard = (cardId: string, playerId: string) => {
+const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) => void, get: () => GameState) => {
   const player = get().players.find(p => p.id === playerId);
   if (!player) return;
 
@@ -213,7 +109,7 @@ const applyPenaltyCard = (cardId: string, playerId: string) => {
   }
 };
 
-const handlePenaltySquare = (playerId: string) => {
+const handlePenaltySquare = (playerId: string, set: (state: any) => void, get: () => GameState) => {
   const player = get().players.find(p => p.id === playerId);
   if (!player) return;
 
@@ -265,19 +161,27 @@ const handlePenaltySquare = (playerId: string) => {
   }
 };
 
-const handleSquareEffect = (playerId: string) => {
-  const player = get().players.find(p => p.id === playerId);
-  if (!player) return;
+const handleSquareEffect = (playerId: string, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const currentPlayer = state.players.find(p => p.id === playerId);
+  if (!currentPlayer) return;
 
-  const square = squares[player.position];
-  if (!square) return;
-
+  const square = squares[currentPlayer.position];
+  
   switch (square.type) {
+    case 'arsa':
+      if (square.property) {
+        if (!square.property.ownerId) {
+          // Satın alma seçeneği
+          set({ showBuyModal: true });
+        } else if (square.property.ownerId !== currentPlayer.id) {
+          // Kira öde
+          get().handlePropertyRent(currentPlayer, square);
+        }
+      }
+      break;
     case 'normal':
       // Normal kare, bir şey yapma
-      break;
-    case 'arsa':
-      // Arsa karesi, property actions handle eder
       break;
     case 'sans':
       // Şans kartı çek
@@ -293,13 +197,13 @@ const handleSquareEffect = (playerId: string) => {
     case 'park':
       // Park karesi
       if (square.effect) {
-        player.xp += square.effect.xp || 0;
+        currentPlayer.xp += square.effect.xp || 0;
         set(state => ({
           ...state,
-          players: state.players.map(p => p.id === playerId ? player : p),
+          players: state.players.map(p => p.id === playerId ? currentPlayer : p),
           lastAction: {
             type: 'park',
-            message: `${player.name} dinlenerek ${square.effect.xp} XP kazandı!`
+            message: `${currentPlayer.name} dinlenerek ${square.effect.xp} XP kazandı!`
           }
         }));
       }
@@ -307,14 +211,14 @@ const handleSquareEffect = (playerId: string) => {
     case 'bonus':
       // Bonus karesi
       if (square.effect) {
-        player.coins += square.effect.coins || 0;
-        player.xp += square.effect.xp || 0;
+        currentPlayer.coins += square.effect.coins || 0;
+        currentPlayer.xp += square.effect.xp || 0;
         set(state => ({
           ...state,
-          players: state.players.map(p => p.id === playerId ? player : p),
+          players: state.players.map(p => p.id === playerId ? currentPlayer : p),
           lastAction: {
             type: 'bonus',
-            message: `${player.name} ${square.effect.coins} altın ve ${square.effect.xp} XP kazandı!`
+            message: `${currentPlayer.name} ${square.effect.coins} altın ve ${square.effect.xp} XP kazandı!`
           }
         }));
       }
@@ -325,6 +229,203 @@ const handleSquareEffect = (playerId: string) => {
   }
 };
 
+const rollDice = async (set: (state: any) => void, get: () => GameState) => {
+  const { players, currentPlayerIndex, isMoving, waitingForDecision } = get();
+  const currentPlayer = players[currentPlayerIndex];
+
+  if (!currentPlayer || isMoving || waitingForDecision || currentPlayer.isBot) {
+    return;
+  }
+
+  set({ isRolling: true });
+
+  try {
+    const roll1 = Math.floor(Math.random() * 6) + 1;
+    const roll2 = Math.floor(Math.random() * 6) + 1;
+    const totalRoll = roll1 + roll2;
+    
+    set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
+    
+    get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await get().movePlayer(currentPlayer.id, totalRoll);
+  } catch (error) {
+    console.error('Error in rollDice:', error);
+    set({ 
+      currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+      waitingForDecision: false,
+      isRolling: false
+    });
+  }
+};
+
+const showNotification = (notification: any, set: (state: any) => void) => {
+  set({ notification });
+  setTimeout(() => set({ notification: null }), 3000);
+};
+
+const clearNotification = (set: (state: any) => void) => {
+  set({ notification: null });
+};
+
+const addToLog = (message: string, set: (state: any) => void, get: () => GameState) => {
+  const { gameLog } = get();
+  set({ gameLog: [...gameLog, message] });
+};
+
+const updateSettings = (newSettings: any, set: (state: any) => void, get: () => GameState) => {
+  set({ settings: newSettings });
+  
+  // Update property prices and rents based on new multipliers
+  const { players } = get();
+  squares.forEach(square => {
+    if (square.property) {
+      square.property.price = Math.floor(square.property.baseRent * 5 * newSettings.propertyPriceMultiplier);
+      if (!square.property.ownerId) {
+        square.property.rent = Math.floor(square.property.baseRent * newSettings.propertyRentMultiplier);
+      }
+    }
+  });
+
+  // Update owned properties
+  players.forEach(player => {
+    player.properties.forEach(property => {
+      property.rent = Math.floor(property.baseRent * (1 + (property.level - 1) * 0.2) * newSettings.propertyRentMultiplier);
+    });
+  });
+
+  set({ players: [...players] });
+};
+
+const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[], set: (state: any) => void, get: () => GameState) => {
+  const { settings } = get();
+  
+  // Reset properties to their base state with current settings
+  squares.forEach(square => {
+    if (square.property) {
+      square.property.price = Math.floor(square.property.baseRent * 5 * settings.propertyPriceMultiplier);
+      square.property.rent = Math.floor(square.property.baseRent * settings.propertyRentMultiplier);
+      square.property.level = 1;
+      square.property.ownerId = null;
+    }
+  });
+
+  const players = playerNames.map((name, index) => ({
+    id: `player-${index}`,
+    name,
+    isBot: playerTypes[index] === 'bot',
+    color: generatePlayerColor(index),
+    position: 0,
+    coins: settings.startingMoney,
+    score: 0,
+    level: 1,
+    xp: 0,
+    strength: 1,
+    properties: [],
+    inventory: {},
+    inJail: false,
+    jailTurnsLeft: 0,
+    allianceId: null,
+    startBonusCount: 0,
+    rentCollected: 0,
+    cardBonuses: 0,
+    itemSales: 0,
+    propertyPurchases: 0,
+    propertyUpgrades: 0,
+    rentPaid: 0,
+    itemPurchases: 0,
+    penalties: 0
+  }));
+
+  set({
+    players,
+    gameStarted: true,
+    currentPlayerIndex: 0,
+    gameLog: ['Oyun başladı!'],
+    waitingForDecision: false,
+    isRolling: false
+  });
+
+  if (players[0].isBot) {
+    setTimeout(() => get().handleBotTurn(), 1500);
+  }
+};
+
+const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
+  const { players, currentPlayerIndex } = get();
+  const currentPlayer = players[currentPlayerIndex];
+
+  if (!currentPlayer) return;
+
+  get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} ejderhayla savaşmaktan kaçındı!</span>`);
+  
+  set({
+    showBossDialog: false,
+    activeBoss: null,
+    waitingForDecision: false,
+    isRolling: false
+  });
+
+  // Sıradaki oyuncuya geç
+  const nextIndex = (currentPlayerIndex + 1) % players.length;
+  set({ currentPlayerIndex: nextIndex });
+
+  // Eğer sıradaki oyuncu bot ise ve açık dialog yoksa, bot turunu başlat
+  const nextPlayer = players[nextIndex];
+  if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {
+    setTimeout(() => get().handleBotTurn(), 1000);
+  }
+};
+
+import { squares } from '../data/board';
+
+const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) => void, get: () => GameState) => {
+  if (!square.property?.ownerId || square.property.ownerId === currentPlayer.id) return;
+
+  const owner = get().players.find(p => p.id === square.property?.ownerId);
+  if (!owner) return;
+
+  // Kral pozisyonunu al
+  const kingPosition = get().kingPosition;
+  const kingSquare = squares.find(s => s.id === kingPosition);
+
+  // Temel kirayı hesapla
+  const baseRent = square.property.baseRent * square.property.level;
+  
+  // Kral'ın konumunu property ID'si ile kontrol et
+  const rentAmount = kingSquare?.property?.id === square.property.id
+    ? baseRent * 10  // Kral bu mülkte ise x10 kira
+    : baseRent;      // Değilse normal kira
+
+  // Kira ödeme bildirimi
+  const rentMessage = kingSquare?.property?.id === square.property.id
+    ? `${currentPlayer.name}, ${owner.name}'in ${square.name} mülküne geldi. Kral burada olduğu için ${rentAmount} 💎 (x10) kira ödedi!`
+    : `${currentPlayer.name}, ${owner.name}'in ${square.name} mülküne geldi ve ${rentAmount} 💎 kira ödedi.`;
+
+  // Kirayı öde
+  currentPlayer.coins -= rentAmount;
+  owner.coins += rentAmount;
+
+  // Bildirim ekle
+  get().addNotification({
+    message: rentMessage,
+    type: 'info'
+  });
+};
+
+const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
+  console.log('🔔 UPDATING KING POSITION:', {
+    'New Position': position,
+    'Square': squares.find(s => s.id === position)
+  });
+  
+  set((state) => ({
+    ...state,
+    kingPosition: position
+  }));
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
   ...handlePropertyActions(set, get),
@@ -332,158 +433,35 @@ export const useGameStore = create<GameState>((set, get) => ({
   ...handleAllianceActions(set, get),
   ...handleBotActions(set, get),
   ...handleCombatActions(set, get),
+  
   calculateItemBonuses,
   getBotMarketDecision,
+  
   movePlayer: (playerId: string, steps: number) => movePlayer(get, set, playerId, steps),
 
-  rollDice: async () => {
-    const { players, currentPlayerIndex, isMoving, waitingForDecision } = get();
-    const currentPlayer = players[currentPlayerIndex];
+  rollDice: () => rollDice(set, get),
 
-    if (!currentPlayer || isMoving || waitingForDecision || currentPlayer.isBot) {
-      return;
-    }
+  showNotification: (notification) => showNotification(notification, set),
 
-    set({ isRolling: true });
+  clearNotification: () => clearNotification(set),
 
-    try {
-      const roll1 = Math.floor(Math.random() * 6) + 1;
-      const roll2 = Math.floor(Math.random() * 6) + 1;
-      const totalRoll = roll1 + roll2;
-      
-      set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
-      
-      get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
+  addToLog: (message: string) => addToLog(message, set, get),
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await get().movePlayer(currentPlayer.id, totalRoll);
-    } catch (error) {
-      console.error('Error in rollDice:', error);
-      set({ 
-        currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
-        waitingForDecision: false,
-        isRolling: false
-      });
-    }
-  },
+  updateSettings: (newSettings) => updateSettings(newSettings, set, get),
 
-  showNotification: (notification) => {
-    set({ notification });
-    setTimeout(() => set({ notification: null }), 3000);
-  },
+  initializeGame: (playerNames: string[], playerTypes: ('human' | 'bot')[]) => initializeGame(playerNames, playerTypes, set, get),
 
-  clearNotification: () => set({ notification: null }),
-
-  addToLog: (message: string) => {
-    const { gameLog } = get();
-    set({ gameLog: [...gameLog, message] });
-  },
-
-  updateSettings: (newSettings) => {
-    set({ settings: newSettings });
-    
-    // Update property prices and rents based on new multipliers
-    const { players } = get();
-    squares.forEach(square => {
-      if (square.property) {
-        square.property.price = Math.floor(square.property.baseRent * 5 * newSettings.propertyPriceMultiplier);
-        if (!square.property.ownerId) {
-          square.property.rent = Math.floor(square.property.baseRent * newSettings.propertyRentMultiplier);
-        }
-      }
-    });
-
-    // Update owned properties
-    players.forEach(player => {
-      player.properties.forEach(property => {
-        property.rent = Math.floor(property.baseRent * (1 + (property.level - 1) * 0.2) * newSettings.propertyRentMultiplier);
-      });
-    });
-
-    set({ players: [...players] });
-  },
-
-  initializeGame: (playerNames: string[], playerTypes: ('human' | 'bot')[]) => {
-    const { settings } = get();
-    
-    // Reset properties to their base state with current settings
-    squares.forEach(square => {
-      if (square.property) {
-        square.property.price = Math.floor(square.property.baseRent * 5 * settings.propertyPriceMultiplier);
-        square.property.rent = Math.floor(square.property.baseRent * settings.propertyRentMultiplier);
-        square.property.level = 1;
-        square.property.ownerId = null;
-      }
-    });
-
-    const players = playerNames.map((name, index) => ({
-      id: `player-${index}`,
-      name,
-      isBot: playerTypes[index] === 'bot',
-      color: generatePlayerColor(index),
-      position: 0,
-      coins: settings.startingMoney,
-      score: 0,
-      level: 1,
-      xp: 0,
-      strength: 1,
-      properties: [],
-      inventory: {},
-      inJail: false,
-      jailTurnsLeft: 0,
-      allianceId: null,
-      startBonusCount: 0,
-      rentCollected: 0,
-      cardBonuses: 0,
-      itemSales: 0,
-      propertyPurchases: 0,
-      propertyUpgrades: 0,
-      rentPaid: 0,
-      itemPurchases: 0,
-      penalties: 0
-    }));
-
-    set({
-      players,
-      gameStarted: true,
-      currentPlayerIndex: 0,
-      gameLog: ['Oyun başladı!'],
-      waitingForDecision: false,
-      isRolling: false
-    });
-
-    if (players[0].isBot) {
-      setTimeout(() => get().handleBotTurn(), 1500);
-    }
-  },
-
-  fleeFromBoss: () => {
-    const { players, currentPlayerIndex } = get();
-    const currentPlayer = players[currentPlayerIndex];
-
-    if (!currentPlayer) return;
-
-    get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} ejderhayla savaşmaktan kaçındı!</span>`);
-    
-    set({
-      showBossDialog: false,
-      activeBoss: null,
-      waitingForDecision: false,
-      isRolling: false
-    });
-
-    // Sıradaki oyuncuya geç
-    const nextIndex = (currentPlayerIndex + 1) % players.length;
-    set({ currentPlayerIndex: nextIndex });
-
-    // Eğer sıradaki oyuncu bot ise ve açık dialog yoksa, bot turunu başlat
-    const nextPlayer = players[nextIndex];
-    if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {
-      setTimeout(() => get().handleBotTurn(), 1000);
-    }
-  },
-  handlePenaltySquare,
-  handleSquareEffect,
+  fleeFromBoss: () => fleeFromBoss(set, get),
+  handlePenaltySquare: (playerId: string) => handlePenaltySquare(playerId, set, get),
+  handleSquareEffect: (playerId: string) => handleSquareEffect(playerId, set, get),
+  applyPenaltyCard: (cardId: string, playerId: string) => applyPenaltyCard(cardId, playerId, set, get),
+  addNotification: (notification) => set((state) => {
+    return {
+      notifications: [...state.notifications, notification]
+    };
+  }),
+  updateKingPosition: (position: number) => updateKingPosition(position, set, get),
+  handlePropertyRent: (currentPlayer: any, square: any) => handlePropertyRent(currentPlayer, square, set, get)
 }));
 
 export default useGameStore;

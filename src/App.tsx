@@ -40,11 +40,11 @@ export default function App() {
           reward={showCombatAnimation.reward}
         />
       )}
-      <header className="bg-blue-600 text-white py-6 mb-8">
+      <header className="bg-gradient-to-r from-purple-800 to-blue-900 text-white py-6 mb-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold text-center">Mystical Path</h1>
           <p className="text-center mt-2 text-blue-100">
-            Büyülü bir strateji oyunu V1.0.1
+            Büyülü bir strateji oyunu V1.1.0
           </p>
         </div>
       </header>

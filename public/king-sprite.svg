@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256">
+  <!-- Taç Tabanı -->
+  <rect x="8" y="40" width="48" height="8" fill="#d9a066" />
+  <rect x="12" y="48" width="40" height="8" fill="#d9a066" />
+  
+  <!-- Taç Zirveleri -->
+  <rect x="12" y="32" width="8" height="8" fill="#bf616a" />
+  <rect x="28" y="24" width="8" height="16" fill="#bf616a" />
+  <rect x="44" y="32" width="8" height="8" fill="#bf616a" />
+  
+  <!-- Değerli Taşlar -->
+  <rect x="14" y="34" width="4" height="4" fill="#5e81ac" />
+  <rect x="30" y="26" width="4" height="4" fill="#a3be8c" />
+  <rect x="46" y="34" width="4" height="4" fill="#b48ead" />
+</svg>

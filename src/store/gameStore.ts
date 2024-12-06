@@ -281,14 +281,62 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
     ...newSettings
   }));
 
-  // Ayarları güncelle
+  // Mevcut oyun durumunu al
+  const state = get();
+  const players = [...state.players];
+  const updatedSquares = squares.map(square => {
+    // Kopyalama yaparak orijinal veriyi değiştirmiyoruz
+    const updatedSquare = { ...square };
+    
+    // Mülk varsa kira ve fiyatları güncelle
+    if (updatedSquare.property) {
+      // Mülk fiyatını güncelle
+      updatedSquare.property.price = Math.floor(
+        updatedSquare.property.baseRent * 5 * 
+        (newSettings.propertyPriceMultiplier || state.settings.propertyPriceMultiplier)
+      );
+
+      // Sahibi olmayan mülklerin kirasını güncelle
+      if (!updatedSquare.property.ownerId) {
+        updatedSquare.property.rent = Math.floor(
+          updatedSquare.property.baseRent * 
+          (newSettings.propertyRentMultiplier || state.settings.propertyRentMultiplier)
+        );
+      }
+    }
+
+    return updatedSquare;
+  });
+
+  // Oyuncuların mülklerinin kirasını güncelle
+  const updatedPlayers = players.map(player => {
+    const updatedPlayer = { ...player };
+    
+    // Her mülkün kirasını güncelle
+    updatedPlayer.properties = updatedPlayer.properties.map(property => ({
+      ...property,
+      rent: Math.floor(
+        property.baseRent * 
+        (1 + (property.level - 1) * 0.2) * 
+        (newSettings.propertyRentMultiplier || state.settings.propertyRentMultiplier)
+      )
+    }));
+
+    return updatedPlayer;
+  });
+
+  // Ayarları ve güncellenmiş verileri kaydet
   set(state => ({
     ...state,
     settings: {
       ...state.settings,
       ...newSettings
-    }
+    },
+    players: updatedPlayers
   }));
+
+  // Global squares nesnesini de güncelle
+  squares.splice(0, squares.length, ...updatedSquares);
 };
 
 const loadSavedSettings = () => {
@@ -391,41 +439,52 @@ const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
 import { squares } from '../data/board';
 
 const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) => void, get: () => GameState) => {
-  if (!square.property?.ownerId || square.property.ownerId === currentPlayer.id) return;
-
-  const owner = get().players.find(p => p.id === square.property?.ownerId);
-  if (!owner) return;
-
-  // Kral pozisyonunu al
-  const kingPosition = get().kingPosition;
-  const kingSquare = squares.find(s => s.id === kingPosition);
-
-  // Mülkün güncel kira değerini kullan
-  const baseRent = square.property.rent;
+  const { players } = get();
+  const owner = players.find(p => p.id === square.property?.ownerId);
   
-  // Kral'ın konumunu property ID'si ile kontrol et
-  const rentAmount = kingSquare?.property?.id === square.property.id
-    ? baseRent * 10  // Kral bu mülkte ise x10 kira
-    : baseRent;      // Değilse normal kira
+  if (!owner || !square.property) return;
 
-  // Kira ödeme bildirimi
-  const rentMessage = kingSquare?.property?.id === square.property.id
-    ? `${currentPlayer.name}, ${owner.name}'in ${square.name} mülküne geldi. Kral burada olduğu için ${rentAmount} 💎 (x10) kira ödedi!`
-    : `${currentPlayer.name}, ${owner.name}'in ${square.name} mülküne geldi ve ${rentAmount} 💎 kira ödedi.`;
+  // Kira miktarını hesapla
+  let rentAmount = square.property.rent;
+  
+  // Kral özelliği açıksa ve kral bu mülkteyse kira 10 katına çıkar
+  if (get().settings.kingEnabled && get().kingPosition === square.id) {
+    rentAmount *= 10;
+  }
 
-  // Kirayı öde
+  // Oyuncunun kira ödeyecek yeterli altını yoksa
+  if (currentPlayer.coins < rentAmount) {
+    // Eğer altın miktarı negatife düşecekse direkt iflas et
+    handleBankruptcy(currentPlayer, rentAmount, owner, get, set);
+    return;
+  }
+
+  // Normal kira ödeme işlemi
   currentPlayer.coins -= rentAmount;
   owner.coins += rentAmount;
+  owner.rentCollected += rentAmount;
 
-  // Bildirim ekle
-  get().addNotification({
-    message: rentMessage,
-    type: 'info'
+  // Log ve bildirim
+  get().addToLog(`<span class="text-blue-500">${currentPlayer.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+
+  // Oyun durumunu güncelle
+  set({
+    players: [...players],
+    showRentDialog: false,
+    rentInfo: null,
+    waitingForDecision: false,
+    currentPlayerIndex: (get().currentPlayerIndex + 1) % players.length
   });
+
+  // Sonraki oyuncu bot ise bot turunu başlat
+  const nextPlayer = players[(get().currentPlayerIndex + 1) % players.length];
+  if (nextPlayer.isBot) {
+    setTimeout(() => get().handleBotTurn(), 1000);
+  }
 };
 
 const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
-  console.log('🔔 UPDATING KING POSITION:', {
+  console.log(' UPDATING KING POSITION:', {
     'New Position': position,
     'Square': squares.find(s => s.id === position)
   });

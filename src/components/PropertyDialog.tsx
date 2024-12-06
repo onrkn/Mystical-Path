@@ -31,9 +31,19 @@ export function PropertyDialog({ property }: PropertyDialogProps) {
     }
   };
 
+  const handleOverlayClick = () => {
+    handlePurchase(false);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+    <div 
+      className="fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center" 
+      onClick={handleOverlayClick}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl w-[90%] max-w-md p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-2xl font-bold mb-4">{property.name}</h2>
         <div className="space-y-4">
           <p className="text-gray-600">

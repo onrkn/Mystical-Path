@@ -3,7 +3,7 @@ import type { Square, Boss, King } from '../types/game';
 const boss: Boss = {
   id: 'dragon-1',
   name: 'Kadim Ejderha',
-  strength: 10,
+  strength: 5,
   rewards: {
     gold: 500,
     xp: 200,

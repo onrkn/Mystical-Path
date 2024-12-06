@@ -90,37 +90,37 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
   payRent: (player: GameState['players'][0], owner: GameState['players'][0], amount: number) => {
     const { players, currentPlayerIndex } = get();
     
-    if (player.coins >= amount) {
-      // Player can afford rent
-      player.coins -= amount;
-      player.rentPaid += amount;
-      owner.coins += amount;
-      owner.rentCollected += amount;
-      
-      get().showNotification({
-        title: 'Kira Ödendi',
-        message: `${player.name}, ${owner.name}'e ${amount} altın kira ödedi!`,
-        type: 'info'
-      });
-      get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${amount} altın kira ödedi!</span>`);
-
-      // Close rent dialog and advance turn
-      set({
-        players: [...players],
-        showRentDialog: false,
-        rentInfo: null,
-        waitingForDecision: false,
-        currentPlayerIndex: (currentPlayerIndex + 1) % players.length
-      });
-
-      // If next player is bot, trigger bot turn
-      const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-      if (nextPlayer.isBot) {
-        setTimeout(() => get().handleBotTurn(), 1000);
-      }
-    } else {
-      // Player goes bankrupt
+    // Oyuncunun kira ödeyecek yeterli altını yoksa
+    if (player.coins < amount) {
+      // Eğer altın miktarı negatife düşecekse direkt iflas et
       handleBankruptcy(player, amount, owner, get, set);
+      return;
+    }
+
+    // Player can afford rent
+    player.coins -= amount;
+    player.rentPaid += amount;
+    owner.coins += amount;
+    owner.rentCollected += amount;
+    
+    get().showNotification({
+      title: 'Kira Ödendi',
+      message: `${player.name}, ${owner.name}'e ${amount} altın kira ödedi!`,
+      type: 'info'
+    });
+    get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${amount} altın kira ödedi!</span>`);
+
+    set({
+      players: [...players],
+      rentInfo: null,
+      waitingForDecision: false,
+      currentPlayerIndex: (currentPlayerIndex + 1) % players.length
+    });
+
+    // If next player is bot, trigger bot turn
+    const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
+    if (nextPlayer.isBot) {
+      setTimeout(() => get().handleBotTurn(), 1000);
     }
   }
 });

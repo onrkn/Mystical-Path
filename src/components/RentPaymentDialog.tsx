@@ -29,12 +29,20 @@ export function RentPaymentDialog({ property, owner, player }: RentPaymentDialog
     // Dialog will be closed by the payRent action
   };
 
+  const handleOverlayClick = () => {
+    // Add your logic here
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center" 
+      onClick={handleOverlayClick}
+    >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-xl p-6 max-w-md w-full m-4"
+        className="bg-white rounded-xl shadow-2xl w-[90%] max-w-md p-6 relative"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-6">
           <Building2 className="w-6 h-6 text-blue-600" />

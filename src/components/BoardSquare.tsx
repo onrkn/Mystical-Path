@@ -48,7 +48,7 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
       borderColor: 'gold',
       boxShadow: '0 0 15px rgba(255,215,0,0.7)',
       transform: 'scale(1.05)',
-      zIndex: 10
+      zIndex: 20
     }),
     ...(owner && {
       borderColor: owner.color,
@@ -108,8 +108,8 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
           ) : (
             <div className="text-gray-600">
               Kira: {isKingOnSquare ? 
-                (square.property.baseRent * square.property.level * 10) : 
-                (square.property.baseRent * square.property.level)} 💎
+                Math.floor(square.property.baseRent * square.property.level * 10 * settings.propertyRentMultiplier) : 
+                Math.floor(square.property.baseRent * square.property.level * settings.propertyRentMultiplier)} 💎
             </div>
           )}
         </div>

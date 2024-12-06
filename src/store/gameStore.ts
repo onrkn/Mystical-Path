@@ -390,8 +390,8 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
   const kingPosition = get().kingPosition;
   const kingSquare = squares.find(s => s.id === kingPosition);
 
-  // Temel kirayı hesapla
-  const baseRent = square.property.baseRent * square.property.level;
+  // Mülkün güncel kira değerini kullan
+  const baseRent = square.property.rent;
   
   // Kral'ın konumunu property ID'si ile kontrol et
   const rentAmount = kingSquare?.property?.id === square.property.id

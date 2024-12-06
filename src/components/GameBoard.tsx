@@ -19,9 +19,15 @@ const kingAnimationStyle = `
 `;
 
 export function GameBoard() {
-  const { players, updateKingPosition } = useGameStore();
+  const { players, updateKingPosition, settings } = useGameStore();
   
   useEffect(() => {
+    // Kral özelliği kapalıysa hiçbir şey yapma
+    if (!settings.kingEnabled) {
+      updateKingPosition(-1); // Kral pozisyonunu sıfırla
+      return;
+    }
+
     // Sadece mülk karelerini filtrele
     const propertySquares = squares.filter(square => square.type === 'arsa');
     
@@ -33,6 +39,12 @@ export function GameBoard() {
     updateKingPosition(initialRandomSquare.id);
 
     const moveKing = () => {
+      // Kral özelliği kapalıysa hareketi durdur
+      if (!settings.kingEnabled) {
+        updateKingPosition(-1);
+        return;
+      }
+
       // Önceki konumdan farklı mülk karelerini filtrele
       const currentKingPosition = useGameStore.getState().kingPosition;
       const currentKingSquare = squares.find(s => s.id === currentKingPosition);
@@ -83,7 +95,7 @@ export function GameBoard() {
     return () => {
       clearInterval(kingMovementInterval);
     };
-  }, []); // Boş bağımlılık dizisi, sadece bir kez çalışır
+  }, [settings.kingEnabled]); // settings.kingEnabled değiştiğinde effect'i yeniden çalıştır
 
   return (
     <>

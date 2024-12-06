@@ -33,11 +33,12 @@ const squareIcons = {
 };
 
 export function BoardSquare({ square, players }: BoardSquareProps) {
-  const { players: allPlayers, kingPosition } = useGameStore();
+  const { players: allPlayers, kingPosition, settings } = useGameStore();
   const Icon = squareIcons[square.type];
   const owner = square.property?.ownerId ? allPlayers.find(p => p.id === square.property?.ownerId) : null;
 
-  const isKingOnSquare = kingPosition === square.id;
+  // Kral özelliği açık ve kral bu karede ise true
+  const isKingOnSquare = settings.kingEnabled && kingPosition === square.id;
 
   const squareStyle = {
     position: 'relative',

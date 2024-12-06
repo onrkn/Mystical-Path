@@ -103,4 +103,12 @@ export interface King {
 
 export type SquareType = 'normal' | 'arsa' | 'sans' | 'ceza' | 'market' | 'park' | 'bonus' | 'boss';
 
+export interface GameSettings {
+  startingMoney: number;
+  passingStartBonus: number;
+  propertyPriceMultiplier: number;
+  propertyRentMultiplier: number;
+  kingEnabled: boolean;
+}
+
 // Rest of the types remain the same...

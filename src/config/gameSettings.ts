@@ -5,4 +5,5 @@ export const defaultSettings: GameSettings = {
   passingStartBonus: 100,
   propertyPriceMultiplier: 1,
   propertyRentMultiplier: 1,
+  kingEnabled: true,
 };

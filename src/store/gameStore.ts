@@ -275,27 +275,37 @@ const addToLog = (message: string, set: (state: any) => void, get: () => GameSta
 };
 
 const updateSettings = (newSettings: any, set: (state: any) => void, get: () => GameState) => {
-  set({ settings: newSettings });
-  
-  // Update property prices and rents based on new multipliers
-  const { players } = get();
-  squares.forEach(square => {
-    if (square.property) {
-      square.property.price = Math.floor(square.property.baseRent * 5 * newSettings.propertyPriceMultiplier);
-      if (!square.property.ownerId) {
-        square.property.rent = Math.floor(square.property.baseRent * newSettings.propertyRentMultiplier);
-      }
+  // Yeni ayarları localStorage'a kaydet
+  localStorage.setItem('gameSettings', JSON.stringify({
+    ...get().settings,
+    ...newSettings
+  }));
+
+  // Ayarları güncelle
+  set(state => ({
+    ...state,
+    settings: {
+      ...state.settings,
+      ...newSettings
     }
-  });
+  }));
+};
 
-  // Update owned properties
-  players.forEach(player => {
-    player.properties.forEach(property => {
-      property.rent = Math.floor(property.baseRent * (1 + (property.level - 1) * 0.2) * newSettings.propertyRentMultiplier);
-    });
-  });
-
-  set({ players: [...players] });
+const loadSavedSettings = () => {
+  const savedSettings = localStorage.getItem('gameSettings');
+  if (savedSettings) {
+    try {
+      const parsedSettings = JSON.parse(savedSettings);
+      return {
+        ...defaultSettings,
+        ...parsedSettings
+      };
+    } catch (error) {
+      console.error('Ayarlar yüklenirken hata oluştu:', error);
+      return defaultSettings;
+    }
+  }
+  return defaultSettings;
 };
 
 const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[], set: (state: any) => void, get: () => GameState) => {
@@ -428,6 +438,7 @@ const updateKingPosition = (position: number, set: (state: any) => void, get: ()
 
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
+  settings: loadSavedSettings(), // Kaydedilen ayarları yükle
   ...handlePropertyActions(set, get),
   ...handleMarketActions(set, get),
   ...handleAllianceActions(set, get),

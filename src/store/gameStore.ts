@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { GameState } from '../types/game';
 import { defaultSettings } from '../config/gameSettings';
 import { squares } from '../data/board';
+import { cezaKartlari } from '../data/cards';
 import { handlePropertyActions } from './actions/propertyActions';
 import { handleMarketActions } from './actions/marketActions';
 import { handleAllianceActions } from './actions/allianceActions';
@@ -18,7 +19,8 @@ const initialState: GameState = {
   currentPlayerIndex: 0,
   gameStarted: false,
   winner: null,
-  lastDiceRoll: null,
+  lastDiceRoll: 0,
+  lastDiceRoll2: 0,
   gameMessage: '',
   gameLog: [],
   alliances: [],
@@ -39,6 +41,288 @@ const initialState: GameState = {
   isMoving: false,
   rentInfo: null,
   bankruptPlayer: null
+};
+
+const drawPenaltyCard = (playerId: string) => {
+  const player = get().players.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Kartları şanslarına göre seç
+  const random = Math.random() * 100; // 0-100 arası
+  let selectedCard = null;
+  
+  for (const card of cezaKartlari) {
+    if (card.chance > 0 && random <= card.chance) {
+      selectedCard = card;
+      break;
+    }
+  }
+
+  if (!selectedCard) {
+    selectedCard = cezaKartlari[0]; // Fallback
+  }
+
+  // Kart etkisini uygula
+  if (selectedCard.effect.transferProperty) {
+    if (player.properties.length > 0) {
+      // En zayıf oyuncuyu bul
+      const otherPlayers = get().players.filter(p => p.id !== playerId);
+      const weakestPlayers = otherPlayers.reduce((acc, curr) => {
+        if (acc.length === 0) return [curr];
+        const accStrength = acc[0].score;
+        const currStrength = curr.score;
+        if (currStrength < accStrength) return [curr];
+        if (currStrength === accStrength) return [...acc, curr];
+        return acc;
+      }, [] as typeof otherPlayers);
+
+      // Rastgele bir zayıf oyuncu seç
+      const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
+      
+      // Rastgele bir mülk seç
+      const propertyIndex = Math.floor(Math.random() * player.properties.length);
+      const property = player.properties[propertyIndex];
+
+      // Mülkü transfer et
+      set(state => {
+        const newPlayers = state.players.map(p => {
+          if (p.id === playerId) {
+            return {
+              ...p,
+              properties: p.properties.filter((_, index) => index !== propertyIndex)
+            };
+          }
+          if (p.id === targetPlayer.id) {
+            return {
+              ...p,
+              properties: [...p.properties, property]
+            };
+          }
+          return p;
+        });
+        return { ...state, players: newPlayers };
+      });
+
+      // Log mesajı
+      get().addToLog(`${player.name}: ${selectedCard.title} - ${selectedCard.description} ${property.name} mülkü ${targetPlayer.name}'e geçti!`);
+    } else {
+      // Mülk yoksa 200 altın cezası
+      set(state => {
+        const newPlayers = state.players.map(p => {
+          if (p.id === playerId) {
+            return {
+              ...p,
+              coins: p.coins - 200
+            };
+          }
+          return p;
+        });
+        return { ...state, players: newPlayers };
+      });
+
+      // Log mesajı
+      get().addToLog(`${player.name}: Mülkü olmadığı için 200 altın ceza ödedi!`);
+    }
+  } else {
+    // Normal ceza kartı etkilerini uygula
+    if (selectedCard.effect.coins) {
+      player.coins = Math.max(0, player.coins + selectedCard.effect.coins);
+    }
+    if (selectedCard.effect.score) {
+      player.score = Math.max(0, player.score + selectedCard.effect.score);
+    }
+    if (selectedCard.effect.xp) {
+      player.xp = Math.max(0, player.xp + selectedCard.effect.xp);
+    }
+
+    set(state => ({
+      ...state,
+      players: state.players.map(p => p.id === player.id ? player : p),
+      lastAction: {
+        type: 'penalty',
+        message: `${player.name} oyuncusu ${selectedCard.title} kartını çekti: ${selectedCard.description}`
+      }
+    }));
+  }
+};
+
+const applyPenaltyCard = (cardId: string, playerId: string) => {
+  const player = get().players.find(p => p.id === playerId);
+  if (!player) return;
+
+  const card = cezaKartlari.find(c => c.id === cardId);
+  if (!card || card.type !== 'penalty') return;
+
+  if (card.effect === 'property_transfer') {
+    if (player.properties.length > 0) {
+      // Find player(s) with lowest strength
+      const players = get().players;
+      const minStrength = Math.min(...players.map(p => p.strength));
+      const weakestPlayers = players.filter(p => p.strength === minStrength && p.id !== playerId);
+      
+      if (weakestPlayers.length > 0) {
+        // Randomly select one of the weakest players
+        const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
+        
+        // Randomly select a property to transfer
+        const propertyIndex = Math.floor(Math.random() * player.properties.length);
+        const property = player.properties[propertyIndex];
+        
+        // Remove property from current player
+        player.properties = player.properties.filter((_, index) => index !== propertyIndex);
+        
+        // Add property to target player
+        targetPlayer.properties.push(property);
+
+        // Update game state
+        set(state => ({
+          ...state,
+          players: state.players.map(p => 
+            p.id === player.id ? player : 
+            p.id === targetPlayer.id ? targetPlayer : p
+          ),
+          lastAction: {
+            type: 'penalty',
+            message: `${player.name} oyuncusunun ${property.name} mülkü ${targetPlayer.name} oyuncusuna transfer edildi!`
+          }
+        }));
+      }
+    } else {
+      // Mülkü olmayan oyuncu için alternatif ceza
+      const penaltyCost = 200; // Mülk transferi yerine 200 altın cezası
+      player.coins = Math.max(0, player.coins - penaltyCost);
+      
+      set(state => ({
+        ...state,
+        players: state.players.map(p => p.id === player.id ? player : p),
+        lastAction: {
+          type: 'penalty',
+          message: `${player.name} oyuncusunun mülkü olmadığı için ${penaltyCost} altın cezası ödedi!`
+        }
+      }));
+    }
+  } else {
+    // Handle other penalty effects...
+    set(state => ({
+      ...state,
+      lastAction: {
+        type: 'penalty',
+        message: `${player.name} oyuncusu ${card.name} ceza kartını çekti!`
+      }
+    }));
+  }
+};
+
+const handlePenaltySquare = (playerId: string) => {
+  const player = get().players.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Eğer oyuncunun mülkü varsa
+  if (player.properties.length > 0) {
+    // En zayıf oyuncuyu bul
+    const players = get().players;
+    const minStrength = Math.min(...players.map(p => p.strength));
+    const weakestPlayers = players.filter(p => p.strength === minStrength && p.id !== playerId);
+    
+    if (weakestPlayers.length > 0) {
+      // Rastgele bir zayıf oyuncu seç
+      const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
+      
+      // Rastgele bir mülk seç
+      const propertyIndex = Math.floor(Math.random() * player.properties.length);
+      const property = player.properties[propertyIndex];
+      
+      // Mülkü transfer et
+      player.properties = player.properties.filter((_, index) => index !== propertyIndex);
+      targetPlayer.properties.push(property);
+
+      // Oyun durumunu güncelle
+      set(state => ({
+        ...state,
+        players: state.players.map(p => 
+          p.id === player.id ? player : 
+          p.id === targetPlayer.id ? targetPlayer : p
+        ),
+        lastAction: {
+          type: 'penalty',
+          message: `${player.name} oyuncusunun ${property.name} mülkü ${targetPlayer.name} oyuncusuna transfer edildi!`
+        }
+      }));
+    }
+  } else {
+    // Mülkü olmayan oyuncu için para cezası
+    const penaltyCost = 200;
+    player.coins = Math.max(0, player.coins - penaltyCost);
+    
+    set(state => ({
+      ...state,
+      players: state.players.map(p => p.id === player.id ? player : p),
+      lastAction: {
+        type: 'penalty',
+        message: `${player.name} oyuncusunun mülkü olmadığı için ${penaltyCost} altın cezası ödedi!`
+      }
+    }));
+  }
+};
+
+const handleSquareEffect = (playerId: string) => {
+  const player = get().players.find(p => p.id === playerId);
+  if (!player) return;
+
+  const square = squares[player.position];
+  if (!square) return;
+
+  switch (square.type) {
+    case 'normal':
+      // Normal kare, bir şey yapma
+      break;
+    case 'arsa':
+      // Arsa karesi, property actions handle eder
+      break;
+    case 'sans':
+      // Şans kartı çek
+      get().drawChanceCard(playerId);
+      break;
+    case 'ceza':
+      // Ceza karesi
+      get().handlePenaltySquare(playerId);
+      break;
+    case 'market':
+      // Market karesi
+      break;
+    case 'park':
+      // Park karesi
+      if (square.effect) {
+        player.xp += square.effect.xp || 0;
+        set(state => ({
+          ...state,
+          players: state.players.map(p => p.id === playerId ? player : p),
+          lastAction: {
+            type: 'park',
+            message: `${player.name} dinlenerek ${square.effect.xp} XP kazandı!`
+          }
+        }));
+      }
+      break;
+    case 'bonus':
+      // Bonus karesi
+      if (square.effect) {
+        player.coins += square.effect.coins || 0;
+        player.xp += square.effect.xp || 0;
+        set(state => ({
+          ...state,
+          players: state.players.map(p => p.id === playerId ? player : p),
+          lastAction: {
+            type: 'bonus',
+            message: `${player.name} ${square.effect.coins} altın ve ${square.effect.xp} XP kazandı!`
+          }
+        }));
+      }
+      break;
+    case 'boss':
+      // Boss karesi
+      break;
+  }
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -63,13 +347,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ isRolling: true });
 
     try {
-      const roll = Math.floor(Math.random() * 6) + 1;
-      set({ lastDiceRoll: roll });
+      const roll1 = Math.floor(Math.random() * 6) + 1;
+      const roll2 = Math.floor(Math.random() * 6) + 1;
+      const totalRoll = roll1 + roll2;
       
-      get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll} attı.</span>`);
+      set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
+      
+      get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
 
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await get().movePlayer(currentPlayer.id, roll);
+      await get().movePlayer(currentPlayer.id, totalRoll);
     } catch (error) {
       console.error('Error in rollDice:', error);
       set({ 
@@ -168,5 +455,35 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (players[0].isBot) {
       setTimeout(() => get().handleBotTurn(), 1500);
     }
-  }
+  },
+
+  fleeFromBoss: () => {
+    const { players, currentPlayerIndex } = get();
+    const currentPlayer = players[currentPlayerIndex];
+
+    if (!currentPlayer) return;
+
+    get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} ejderhayla savaşmaktan kaçındı!</span>`);
+    
+    set({
+      showBossDialog: false,
+      activeBoss: null,
+      waitingForDecision: false,
+      isRolling: false
+    });
+
+    // Sıradaki oyuncuya geç
+    const nextIndex = (currentPlayerIndex + 1) % players.length;
+    set({ currentPlayerIndex: nextIndex });
+
+    // Eğer sıradaki oyuncu bot ise ve açık dialog yoksa, bot turunu başlat
+    const nextPlayer = players[nextIndex];
+    if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {
+      setTimeout(() => get().handleBotTurn(), 1000);
+    }
+  },
+  handlePenaltySquare,
+  handleSquareEffect,
 }));
+
+export default useGameStore;

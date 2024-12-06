@@ -19,8 +19,7 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
         showPropertyDialog: false,
         showRentDialog: false,
         rentInfo: null,
-        selectedProperty: null,
-        activeBoss: null
+        selectedProperty: null
       });
 
       // Check for property upgrades before rolling
@@ -32,15 +31,18 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
 
       // Roll dice if not in jail
       if (!currentPlayer.inJail) {
-        const roll = Math.floor(Math.random() * 6) + 1;
-        set({ lastDiceRoll: roll });
-        get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll} attı.</span>`);
+        const roll1 = Math.floor(Math.random() * 6) + 1;
+        const roll2 = Math.floor(Math.random() * 6) + 1;
+        const totalRoll = roll1 + roll2;
+        
+        set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
+        get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
 
         // Add delay before moving
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Move player with animation
-        await get().movePlayer(currentPlayer.id, roll);
+        await get().movePlayer(currentPlayer.id, totalRoll);
       } else {
         // Skip turn if in jail
         currentPlayer.jailTurnsLeft--;

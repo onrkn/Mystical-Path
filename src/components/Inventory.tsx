@@ -41,6 +41,12 @@ function InventorySlot({ item, type, onEquip }: InventorySlotProps) {
               {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
             </div>
           ))}
+          {(item.rarity === 'legendary' || item.rarity === 'rare') && (
+            <div className="flex items-center gap-1 text-gray-600">
+              <Sword className="w-3 h-3 text-red-500" />
+              {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
+            </div>
+          )}
         </div>
       )}
     </div>

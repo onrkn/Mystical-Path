@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, TrendingUp, TrendingDown, Shield, Coins, Star, Package } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Shield, Coins, Star, Package, Swords } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { calculateItemBonuses } from '../store/utils/itemUtils';
 import { cn } from '../utils/cn';
@@ -86,11 +86,17 @@ export function PlayerStatsModal({ playerId, onClose }: PlayerStatsModalProps) {
                     <div className="text-xs space-y-1">
                       {item.effects.map((effect, i) => (
                         <div key={i} className="text-gray-600">
-                          {effect.rentReduction && `Kira -%${effect.rentReduction * 100}`}
-                          {effect.goldMultiplier && `Altın +%${effect.goldMultiplier * 100}`}
-                          {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
+                          {effect.rentReduction && `${effect.rentReduction * 100}% kira indirimi`}
+                          {effect.goldMultiplier && `${effect.goldMultiplier * 100}% altın çarpanı`}
+                          {effect.expBonus && `${effect.expBonus * 100}% XP bonusu`}
                         </div>
                       ))}
+                      {(item.rarity === 'legendary' || item.rarity === 'rare') && (
+                        <div className="text-gray-600 flex items-center gap-1">
+                          <Swords className="w-3 h-3" />
+                          {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

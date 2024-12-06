@@ -3,6 +3,7 @@ import type { GameState, Square } from '../../types/game';
 import { sansKartlari, cezaKartlari } from '../../data/cards';
 import { calculateItemBonuses } from '../utils/itemUtils';
 import { getBotDecision } from '../../utils/botAI';
+import { calculateStrength } from '../../utils/playerUtils';
 
 export function advanceToNextPlayer(get: GetState<GameState>, set: SetState<GameState>) {
   const { players, currentPlayerIndex } = get();
@@ -48,15 +49,27 @@ export async function handleSquareAction(
       case 'boss':
         if (square.boss) {
           if (player.isBot) {
-            const playerStrength = get().calculateStrength(player);
+            const playerStrength = calculateStrength(player);
             const winChance = Math.min(Math.max((playerStrength / (playerStrength + square.boss.strength)) * 100, 10), 90);
             
+            // Biraz gecikme ekle
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // activeBoss'u ayarla
+            set({ activeBoss: square.boss });
+            
             if (winChance >= 50) {
-              await get().fightBoss(player.id);
+              // Log mesajı ekle
+              get().addToLog(`<span class="text-orange-500">${player.name} ejderhayla savaşmaya karar verdi! (Kazanma şansı: %${Math.round(winChance)})</span>`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              get().fightBoss(player.id);
             } else {
-              get().addToLog(`<span class="text-yellow-500">${player.name} ejderhayla savaşmaktan kaçındı! (Kazanma şansı: %${Math.round(winChance)})</span>`);
-              advanceToNextPlayer(get, set);
+              // Log mesajı ekle
+              get().addToLog(`<span class="text-yellow-500">${player.name} ejderhayla savaşmaktan kaçınıyor! (Kazanma şansı: %${Math.round(winChance)})</span>`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              get().fleeFromBoss();
             }
+            return;
           } else {
             set({ 
               showBossDialog: true,

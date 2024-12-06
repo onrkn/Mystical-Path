@@ -37,27 +37,31 @@ export const cezaKartlari: Card[] = [
     type: 'ceza',
     title: 'Vergi Borcu',
     description: 'Krallığa vergi ödemeniz gerekiyor!',
-    effect: { coins: -25 }
+    effect: { coins: -25 },
+    chance: 25
   },
   {
     id: 2,
     type: 'ceza',
     title: 'Ejderha Saldırısı',
     description: 'Ejderha hazinelerinizi çaldı!',
-    effect: { coins: -40, score: -10 }
+    effect: { coins: -40, score: -10 },
+    chance: 25
   },
   {
     id: 3,
     type: 'ceza',
     title: 'Büyü Kazası',
     description: 'Yanlış büyü size zarar verdi!',
-    effect: { coins: -35, xp: -10 }
+    effect: { coins: -35, xp: -10 },
+    chance: 25
   },
   {
     id: 4,
     type: 'ceza',
     title: 'Hırsız',
     description: 'Bir hırsız paranızı çaldı!',
-    effect: { coins: -30 }
+    effect: { coins: -30 },
+    chance: 25
   }
 ];

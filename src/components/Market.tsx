@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, RefreshCw, Coins } from 'lucide-react';
+import { ShoppingBag, RefreshCw, Coins, Sword } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
 import { cn } from '../utils/cn';
@@ -109,9 +109,15 @@ export function Market() {
                               {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
                             </div>
                           ))}
-                        </div>
-                        <div className="mt-2 text-xs font-medium">
-                          Değeri: {item.value} 💰
+                          {(item.rarity === 'legendary' || item.rarity === 'rare') && (
+                            <div className="text-gray-600 flex items-center gap-1">
+                              <Sword className="w-3 h-3 text-red-500" />
+                              {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
+                            </div>
+                          )}
+                          <div className="mt-2 text-xs font-medium">
+                            Değeri: {item.value} 💰
+                          </div>
                         </div>
                       </>
                     )}
@@ -143,6 +149,12 @@ export function Market() {
                         {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
                       </div>
                     ))}
+                    {(item.rarity === 'legendary' || item.rarity === 'rare') && (
+                      <div className="text-gray-600 flex items-center gap-1">
+                        <Sword className="w-3 h-3 text-red-500" />
+                        {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => handlePurchase(item)}

@@ -12,27 +12,6 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
 
     const playerStrength = calculateStrength(player);
     const winChance = Math.min(Math.max((playerStrength / (playerStrength + activeBoss.strength)) * 100, 10), 90);
-
-    // Bot decision logic
-    if (player.isBot) {
-      if (winChance < 50) {
-        // Bot decides to run away
-        get().addToLog(`<span class="text-yellow-500">${player.name} ejderhayla savaşmaktan kaçındı! (Kazanma şansı: %${Math.round(winChance)})</span>`);
-        set({
-          showBossDialog: false,
-          activeBoss: null,
-          waitingForDecision: false,
-          currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
-        });
-
-        // If next player is bot, trigger bot turn
-        const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-        if (nextPlayer.isBot) {
-          setTimeout(() => get().handleBotTurn(), 1000);
-        }
-        return;
-      }
-    }
     
     const won = Math.random() * 100 < winChance;
     
@@ -65,7 +44,7 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         message: `${player.name} ejderhayı yendi ve ${goldReward} altın, ${xpReward} XP kazandı!`,
         type: 'success'
       });
-      get().addToLog(`<span class="text-orange-500">${player.name} ejderhayı yendi! (Şans: %${Math.round(winChance)}) (+${goldReward} altın, +${xpReward} XP)</span>`);
+      get().addToLog(`<span class="text-orange-500">${player.name} ejderhayı yendi! (+${goldReward} altın, +${xpReward} XP)</span>`);
     } else {
       const lostGold = Math.floor(player.coins * 0.5);
       player.coins -= lostGold;
@@ -80,7 +59,7 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         message: `${player.name} ejderhaya yenildi ve ${lostGold} altın kaybetti!`,
         type: 'error'
       });
-      get().addToLog(`<span class="text-red-500">${player.name} ejderhaya yenildi! (Şans: %${Math.round(winChance)}) (-${lostGold} altın)</span>`);
+      get().addToLog(`<span class="text-red-500">${player.name} ejderhaya yenildi! (-${lostGold} altın)</span>`);
     }
     
     set({

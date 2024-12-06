@@ -66,4 +66,34 @@ export interface Player {
   penalties: number;
 }
 
+export interface Penalty {
+  id: string;
+  title: string;
+  description: string;
+  chance: number;
+  effect: {
+    taxPercentage?: number;
+    jailTurns?: number;
+    coins?: number;
+    moveSteps?: number;
+    transferProperty?: boolean;
+  };
+}
+
+export interface Card {
+  id: number;
+  type: 'sans' | 'ceza';
+  title: string;
+  description: string;
+  effect: {
+    coins?: number;
+    score?: number;
+    xp?: number;
+    transferProperty?: boolean;
+  };
+  chance: number;
+}
+
+export type SquareType = 'normal' | 'arsa' | 'sans' | 'ceza' | 'market' | 'park' | 'bonus' | 'boss';
+
 // Rest of the types remain the same...

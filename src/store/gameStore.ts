@@ -486,6 +486,22 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
     // İflas mekanizmasını çağır
     get().handleBankruptcy(currentPlayer.id);
+    
+    // Sonraki oyuncuya geç
+    const nextIndex = (get().currentPlayerIndex + 1) % players.length;
+    set({ 
+      currentPlayerIndex: nextIndex,
+      showRentDialog: false,
+      rentInfo: null,
+      waitingForDecision: false,
+      isRolling: false
+    });
+
+    // Sonraki oyuncu bot ise bot turunu başlat
+    const nextPlayer = players[nextIndex];
+    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
+      setTimeout(() => get().handleBotTurn(), 1000);
+    }
     return;
   }
 
@@ -508,7 +524,7 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
   // Sonraki oyuncu bot ise bot turunu başlat
   const nextPlayer = players[(get().currentPlayerIndex + 1) % players.length];
-  if (nextPlayer.isBot) {
+  if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
     setTimeout(() => get().handleBotTurn(), 1000);
   }
 };
@@ -653,6 +669,7 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Oyuncuyu iflas ettir
   bankruptPlayer.isBankrupt = true;
   bankruptPlayer.coins = 0;
+  bankruptPlayer.properties = [];
 
   // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
   const updatedPlayers = players.filter(p => p.id !== playerId);
@@ -679,12 +696,16 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   set({
     players: updatedPlayers,
     currentPlayerIndex: newCurrentPlayerIndex,
-    gameMessage: `${bankruptPlayer.name} oyundan elendi!`
+    gameMessage: `${bankruptPlayer.name} oyundan elendi!`,
+    showRentDialog: false,
+    rentInfo: null,
+    waitingForDecision: false,
+    isRolling: false
   });
 
   // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
-  if (nextPlayer.isBot) {
+  if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
     setTimeout(() => get().handleBotTurn(), 1500);
   }
 };

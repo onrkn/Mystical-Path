@@ -19,7 +19,7 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
       
       // Sonraki oyuncuya geç
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-      if (nextPlayer?.isBot) {
+      if (nextPlayer?.isBot && !nextPlayer.isBankrupt) {
         setTimeout(() => get().handleBotTurn(), 1500);
       }
       return;
@@ -56,7 +56,11 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
         const roll2 = Math.floor(Math.random() * 6) + 1;
         const totalRoll = roll1 + roll2;
         
-        set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
+        set({ 
+          lastDiceRoll: roll1, 
+          lastDiceRoll2: roll2,
+          isRolling: true 
+        });
         get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
 
         // Add delay before moving
@@ -99,7 +103,7 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
 
       // If next player is bot, continue bot chain after a delay
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-      if (nextPlayer?.isBot) {
+      if (nextPlayer?.isBot && !nextPlayer.isBankrupt) {
         setTimeout(() => get().handleBotTurn(), 1500);
       }
     }

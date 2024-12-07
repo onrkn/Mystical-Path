@@ -320,7 +320,7 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
     return updatedSquare;
   });
 
-  // Oyuncuların mülklerinin kirasını güncelle
+  // Oyuncuların mülklerinin kirasını yeniden hesapla
   const updatedPlayers = players.map(player => {
     const updatedPlayer = { ...player };
     
@@ -468,8 +468,8 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
   // Oyuncunun kira ödeyecek yeterli altını yoksa
   if (currentPlayer.coins < rentAmount) {
-    // Eğer altın miktarı negatife düşecekse direkt iflas et
-    handleBankruptcy(currentPlayer, rentAmount, owner, get, set);
+    // İflas mekanizmasını çağır
+    get().handleBankruptcy(currentPlayer, rentAmount, owner);
     return;
   }
 
@@ -603,6 +603,60 @@ const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState
   }
 };
 
+const handleBankruptcy = (
+  bankruptPlayer: any, 
+  rentAmount: number, 
+  owner: any, 
+  get: () => GameState, 
+  set: (state: any) => void
+) => {
+  // Oyuncu mülklerini sahipsiz bırak
+  const updatedPlayers = get().players.map(player => {
+    if (player.id === bankruptPlayer.id) {
+      // Mülkleri sahipsiz bırak
+      player.properties.forEach(prop => {
+        prop.ownerId = null; // Sadece sahipsiz bırak, transfer etme
+      });
+      return null; // Bu oyuncuyu oyun dışına çıkar
+    }
+    return player;
+  }).filter(Boolean); // Null oyuncuları filtrele
+
+  // Log ve bildirim
+  get().addToLog(`<span class="text-red-500">${bankruptPlayer.name} iflas etti ve oyundan çıktı! Mülkleri sahipsiz kaldı.</span>`);
+  get().showNotification({
+    title: 'İflas!',
+    message: `${bankruptPlayer.name} oyuncusu iflas etti ve oyundan çıktı. Mülkleri sahipsiz kaldı.`,
+    type: 'error'
+  });
+
+  // Oyun durumunu güncelle
+  set({
+    players: updatedPlayers,
+    showBankruptcyDialog: true,
+    bankruptPlayer: bankruptPlayer,
+    currentPlayerIndex: get().currentPlayerIndex % updatedPlayers.length,
+    waitingForDecision: false
+  });
+
+  // Oyun bitiş kontrolü
+  if (updatedPlayers.length === 1) {
+    // Tek kalan oyuncu kazandı
+    const winner = updatedPlayers[0];
+    get().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
+    set({
+      winner: winner,
+      gameStarted: false
+    });
+  } else {
+    // Sonraki oyuncuya geç
+    const nextPlayer = updatedPlayers[get().currentPlayerIndex % updatedPlayers.length];
+    if (nextPlayer.isBot) {
+      setTimeout(() => get().handleBotTurn(), 1000);
+    }
+  }
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
   settings: loadSavedSettings(), // Kaydedilen ayarları yükle
@@ -643,7 +697,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   updateWeather: (weather: GameState['weather']) => updateWeather(weather, set, get),
   startWeatherSystem: () => startWeatherSystem(set, get),
   stopWeatherSystem: () => stopWeatherSystem(),
-  initializeWeatherSystem: () => initializeWeatherSystem(set, get)
+  initializeWeatherSystem: () => initializeWeatherSystem(set, get),
+  handleBankruptcy: (bankruptPlayer: any, rentAmount: number, owner: any) => handleBankruptcy(bankruptPlayer, rentAmount, owner, get, set)
 }));
 
 export default useGameStore;

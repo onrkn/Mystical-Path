@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, RefreshCw, Coins, Sword } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
 import { cn } from '../utils/cn';
-import { playMagicShopPurchaseSound } from '../utils/soundUtils';
+import { playMagicShopPurchaseSound, MARKET_MUSIC, stopBackgroundMusic, playBackgroundMusic } from '../utils/soundUtils';
 
 export function Market() {
   const [items, setItems] = useState(() => Array(6).fill(null).map(() => generateRandomItem()));
@@ -13,11 +13,44 @@ export function Market() {
   const [hasPurchased, setHasPurchased] = useState(false);
   const [hasRefreshed, setHasRefreshed] = useState(false);
 
+  // Market açıldığında müziği başlat ve tema müziğini durdur
+  React.useEffect(() => {
+    // Tema müziğini durdur
+    stopBackgroundMusic();
+    
+    // Market müziğini başlat
+    useGameStore.getState().toggleMarketMusic(true);
+    
+    // Bileşen kapandığında müziği durdur
+    return () => {
+      useGameStore.getState().toggleMarketMusic(false);
+    };
+  }, []);
+
   const handlePurchase = (item: ReturnType<typeof generateRandomItem>) => {
     if (currentPlayer.coins >= item.value && !hasPurchased) {
       playMagicShopPurchaseSound();
       equipItem(currentPlayer.id, item);
       setHasPurchased(true);
+
+      // Market müziğini durdur
+      useGameStore.getState().toggleMarketMusic(false);
+
+      // Tema müziğini tekrar başlat
+      playBackgroundMusic();
+
+      // Market dialog'unu kapat
+      useGameStore.setState({ 
+        showMarketDialog: false,
+        waitingForDecision: false,
+        currentPlayerIndex: (currentPlayerIndex + 1) % players.length
+      });
+
+      // If next player is bot, trigger bot turn
+      const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
+      if (nextPlayer.isBot) {
+        setTimeout(() => useGameStore.getState().handleBotTurn(), 1000);
+      }
     }
   };
 
@@ -40,6 +73,12 @@ export function Market() {
       waitingForDecision: false,
       currentPlayerIndex: (currentPlayerIndex + 1) % players.length
     });
+
+    // Market müziğini durdur
+    useGameStore.getState().toggleMarketMusic(false);
+
+    // Tema müziğini tekrar başlat
+    playBackgroundMusic();
 
     // If next player is bot, trigger bot turn
     const nextPlayer = players[(currentPlayerIndex + 1) % players.length];

@@ -111,7 +111,7 @@ export default function App() {
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold text-center">Mystical Path</h1>
           <p className="text-center mt-2 text-blue-100">
-            Büyülü bir strateji oyunu V1.1.0
+            Büyülü bir strateji oyunu V1.3
           </p>
         </div>
       </header>

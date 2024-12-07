@@ -14,6 +14,7 @@ import { handleSquareAction } from './actions/squareActions';
 import { generatePlayerColor } from '../utils/playerUtils';
 import { calculateRent } from './actions/propertyActions';
 import { playSoundEffect, SOUND_EFFECTS } from '../utils/soundUtils';
+import { MARKET_MUSIC } from '../utils/soundUtils';
 
 const initialState: GameState = {
   players: [],
@@ -698,6 +699,16 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
   }
 };
 
+const toggleMarketMusic = (show: boolean) => {
+  if (show) {
+    // Market açılırken müziği başlat
+    MARKET_MUSIC.play();
+  } else {
+    // Market kapanırken müziği durdur
+    MARKET_MUSIC.stop();
+  }
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
   settings: loadSavedSettings(), // Kaydedilen ayarları yükle
@@ -740,7 +751,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   stopWeatherSystem: () => stopWeatherSystem(),
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
   handleBankruptcy: (bankruptPlayer: any, rentAmount: number, owner: any) => handleBankruptcy(bankruptPlayer, rentAmount, owner, get, set),
-  payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get)
+  payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
+  toggleMarketMusic: (show: boolean) => toggleMarketMusic(show)
 }));
 
 export default useGameStore;

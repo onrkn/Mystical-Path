@@ -91,6 +91,11 @@ let backgroundMusicInstance: Howl | null = null;
 export function playBackgroundMusic() {
   // Müzik ayarı kapalıysa çalma
   const musicEnabled = useGameStore.getState().settings.musicEnabled;
+  const isMarketOpen = useGameStore.getState().showMarketDialog;
+  
+  // Market açıksa tema müziğini çalma
+  if (isMarketOpen) return null;
+
   if (!musicEnabled) return null;
 
   // Eğer zaten çalan bir müzik varsa durdur
@@ -106,7 +111,7 @@ export function playBackgroundMusic() {
     html5: true,
     preload: true, // Otomatik preload'u aç
     loop: true,
-    volume: 0.1,  
+    volume: 0.05,  
     onload: () => {
       console.log('Müzik başarıyla yüklendi');
       backgroundMusicInstance?.play();
@@ -143,6 +148,13 @@ export function stopBackgroundMusic() {
     backgroundMusicInstance = null;
   }
 }
+
+export const MARKET_MUSIC = new Howl({
+  src: ['/sounds/market-music.mp3'],
+  html5: true,
+  loop: true,
+  volume: 0.3
+});
 
 export function playSoundEffect(soundName: string, volume: number = 0.5) {
   // Her ses çalma işleminden önce önbelleği temizle

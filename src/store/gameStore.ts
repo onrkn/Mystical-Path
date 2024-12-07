@@ -520,7 +520,7 @@ const updateKingPosition = (position: number, set: (state: any) => void, get: ()
       }
     });
   });
-  
+
   // Oyuncuları güncelle
   set({ players: [...players] });
 };
@@ -613,57 +613,61 @@ const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState
   }
 };
 
-const handleBankruptcy = (
-  bankruptPlayer: any, 
-  rentAmount: number, 
-  owner: any, 
-  get: () => GameState, 
-  set: (state: any) => void
-) => {
-  // Oyuncu mülklerini sahipsiz bırak
-  const updatedPlayers = get().players.map(player => {
-    if (player.id === bankruptPlayer.id) {
-      // Mülkleri sahipsiz bırak
-      player.properties.forEach(prop => {
-        prop.ownerId = null; // Sadece sahipsiz bırak, transfer etme
-      });
-      return null; // Bu oyuncuyu oyun dışına çıkar
-    }
-    return player;
-  }).filter(Boolean); // Null oyuncuları filtrele
+const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const { players } = state;
 
-  // Log ve bildirim
-  get().addToLog(`<span class="text-red-600">💥 ${bankruptPlayer.name} iflas etti ve oyundan çıktı!</span>`);
-  get().showNotification({
-    title: 'İFLAS!',
-    message: `${bankruptPlayer.name} oyuncusu iflas etti ve oyundan çıktı. Mülkleri sahipsiz kaldı.`,
-    type: 'error'
+  // İflas eden oyuncuyu bul
+  const bankruptPlayer = players.find(p => p.id === playerId);
+  if (!bankruptPlayer) return;
+
+  // Mülk sahibini bul (son kirayı ödemek zorunda kaldığı oyuncu)
+  const owner = state.rentInfo?.owner;
+
+  // İflas eden oyuncunun kalan parasını mülk sahibine aktar
+  if (owner && bankruptPlayer.coins > 0) {
+    owner.coins += bankruptPlayer.coins;
+    get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${bankruptPlayer.coins} parasını aldı!</span>`);
+  }
+
+  // Oyuncunun tüm mülklerini serbest bırak
+  bankruptPlayer.properties.forEach(prop => {
+    prop.ownerId = null;
+    prop.level = 1;
   });
+
+  // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
+  const updatedPlayers = players.filter(p => p.id !== playerId);
+
+  // Eğer son kalan oyuncu ise oyunu bitir
+  if (updatedPlayers.length === 1) {
+    const winner = updatedPlayers[0];
+    set({
+      players: updatedPlayers,
+      winner,
+      gameMessage: `${winner.name} oyunu kazandı!`,
+      gameStarted: false
+    });
+    return;
+  }
+
+  // Mevcut oyuncu indexini güncelle
+  let newCurrentPlayerIndex = state.currentPlayerIndex;
+  if (newCurrentPlayerIndex >= updatedPlayers.length) {
+    newCurrentPlayerIndex = 0;
+  }
 
   // Oyun durumunu güncelle
   set({
     players: updatedPlayers,
-    showBankruptcyDialog: true,
-    bankruptPlayer: bankruptPlayer,
-    currentPlayerIndex: get().currentPlayerIndex % updatedPlayers.length,
-    waitingForDecision: false
+    currentPlayerIndex: newCurrentPlayerIndex,
+    gameMessage: `${bankruptPlayer.name} oyundan elendi!`
   });
 
-  // Oyun bitiş kontrolü
-  if (updatedPlayers.length === 1) {
-    // Tek kalan oyuncu kazandı
-    const winner = updatedPlayers[0];
-    get().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
-    set({
-      winner: winner,
-      gameStarted: false
-    });
-  } else {
-    // Sonraki oyuncuya geç
-    const nextPlayer = updatedPlayers[get().currentPlayerIndex % updatedPlayers.length];
-    if (nextPlayer.isBot) {
-      setTimeout(() => get().handleBotTurn(), 1000);
-    }
+  // Sonraki oyuncu bir bot ise bot turunu başlat
+  const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
+  if (nextPlayer?.isBot) {
+    setTimeout(() => get().handleBotTurn(), 1500);
   }
 };
 
@@ -671,7 +675,7 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
   // Oyuncunun kirayı ödeyecek yeterli parası yoksa
   if (player.coins < rentAmount) {
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(player, rentAmount, owner);
+    get().handleBankruptcy(player.id, set, get);
     return;
   }
 
@@ -752,7 +756,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   startWeatherSystem: () => startWeatherSystem(set, get),
   stopWeatherSystem: () => stopWeatherSystem(),
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
-  handleBankruptcy: (bankruptPlayer: any, rentAmount: number, owner: any) => handleBankruptcy(bankruptPlayer, rentAmount, owner, get, set),
+  handleBankruptcy: (playerId: string) => handleBankruptcy(playerId, set, get),
   payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
   toggleMarketMusic: (show: boolean) => toggleMarketMusic(show)
 }));

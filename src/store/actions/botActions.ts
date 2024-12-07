@@ -10,6 +10,21 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
     // Eğer zaten bir bot turu devam ediyorsa, yeni bir tur başlatma
     if (isBotTurnInProgress) return;
 
+    // Oyuncu iflas etmişse veya oyun dışındaysa atla
+    if (!currentPlayer || currentPlayer.coins <= 0) {
+      set({ 
+        currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+        isBotTurnInProgress: false
+      });
+      
+      // Sonraki oyuncuya geç
+      const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
+      if (nextPlayer?.isBot) {
+        setTimeout(() => get().handleBotTurn(), 1500);
+      }
+      return;
+    }
+
     if (!currentPlayer?.isBot) return;
 
     try {

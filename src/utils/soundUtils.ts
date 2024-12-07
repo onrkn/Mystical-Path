@@ -82,7 +82,8 @@ function loadAndPlaySound(soundPath: string, volume: number = 0.5): void {
 }
 
 export const MUSIC_TRACKS = {
-  THEME: '/sounds/theme-music.mp3'
+  THEME: '/sounds/theme-music.mp3',
+  BOSS_BATTLE: '/sounds/boss-battle-music.mp3' // Yeni ejderha savaş müziği
 };
 
 let backgroundMusicInstance: Howl | null = null;

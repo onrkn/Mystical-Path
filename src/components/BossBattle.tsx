@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { calculateStrength } from '../utils/playerUtils';
 import { Skull, Swords, Shield, Coins, Star, Gift, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MUSIC_TRACKS, playBackgroundMusic, stopBackgroundMusic } from '../utils/soundUtils';
+import { Howl } from 'howler';
 
 export function BossBattle() {
   const { players, currentPlayerIndex, activeBoss, fightBoss, fleeFromBoss } = useGameStore();
   const currentPlayer = players[currentPlayerIndex];
+
+  useEffect(() => {
+    // Ejderha savaş müziğini çal
+    stopBackgroundMusic(); // Önceki müziği durdur
+    const bossBattleMusic = new Howl({
+      src: [MUSIC_TRACKS.BOSS_BATTLE],
+      html5: true,
+      loop: true,
+      volume: 0.2, // Biraz daha yumuşak ses
+      onloaderror: (id, err) => {
+        console.error('Boss Battle müzik yükleme hatası:', err);
+      },
+      onplayerror: (id, err) => {
+        console.error('Boss Battle müzik çalma hatası:', err);
+      }
+    });
+
+    bossBattleMusic.play();
+
+    // Bileşen unmount olduğunda müziği durdur
+    return () => {
+      bossBattleMusic.stop();
+      bossBattleMusic.unload();
+      // Ana tema müziğini tekrar başlat
+      playBackgroundMusic();
+    };
+  }, []); // Sadece ilk render'da çalış
 
   if (!activeBoss) return null;
 

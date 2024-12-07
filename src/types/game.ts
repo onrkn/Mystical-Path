@@ -65,6 +65,7 @@ export interface Player {
   rentPaid: number;
   itemPurchases: number;
   penalties: number;
+  isBankrupt?: boolean;
 }
 
 export interface Penalty {

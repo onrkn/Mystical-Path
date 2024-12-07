@@ -471,8 +471,12 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
   // Oyuncunun kira ödeyecek yeterli altını yoksa
   if (currentPlayer.coins < rentAmount) {
+    // Oyuncunun tüm parasını mülk sahibine aktar
+    const transferAmount = currentPlayer.coins;
+    owner.coins += transferAmount;
+    
     // Log ve bildirim
-    get().addToLog(`<span class="text-red-600">${currentPlayer.name}, ${rentAmount} altın kirayı ödeyemedi!</span>`);
+    get().addToLog(`<span class="text-red-600">${currentPlayer.name}, ${rentAmount} altın kirayı tam ödeyemedi! Kalan ${transferAmount} altını ${owner.name}'e aktardı.</span>`);
     
     get().showNotification({
       title: 'İFLAS!',
@@ -633,10 +637,11 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Mülk sahibini bul (son kirayı ödemek zorunda kaldığı oyuncu)
   const owner = state.rentInfo?.owner;
 
-  // İflas eden oyuncunun kalan parasını mülk sahibine aktar
-  if (owner && bankruptPlayer.coins > 0) {
-    owner.coins += bankruptPlayer.coins;
-    get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${bankruptPlayer.coins} parasını aldı!</span>`);
+  // Oyuncunun tüm parasını mülk sahibine aktar
+  const transferAmount = bankruptPlayer.coins;
+  if (owner) {
+    owner.coins += transferAmount;
+    get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
   }
 
   // Oyuncunun tüm mülklerini serbest bırak
@@ -644,6 +649,10 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
     prop.ownerId = null;
     prop.level = 1;
   });
+
+  // Oyuncuyu iflas ettir
+  bankruptPlayer.isBankrupt = true;
+  bankruptPlayer.coins = 0;
 
   // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
   const updatedPlayers = players.filter(p => p.id !== playerId);
@@ -675,7 +684,7 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
 
   // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
-  if (nextPlayer?.isBot) {
+  if (nextPlayer.isBot) {
     setTimeout(() => get().handleBotTurn(), 1500);
   }
 };

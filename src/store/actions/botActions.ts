@@ -11,7 +11,7 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
     if (isBotTurnInProgress) return;
 
     // Oyuncu iflas etmişse veya oyun dışındaysa atla
-    if (!currentPlayer || currentPlayer.coins <= 0) {
+    if (!currentPlayer || currentPlayer.coins <= 0 || currentPlayer.isBankrupt) {
       set({ 
         currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
         isBotTurnInProgress: false

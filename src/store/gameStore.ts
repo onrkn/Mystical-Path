@@ -471,8 +471,17 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
   // Oyuncunun kira ödeyecek yeterli altını yoksa
   if (currentPlayer.coins < rentAmount) {
+    // Log ve bildirim
+    get().addToLog(`<span class="text-red-600">${currentPlayer.name}, ${rentAmount} altın kirayı ödeyemedi!</span>`);
+    
+    get().showNotification({
+      title: 'İFLAS!',
+      message: `${currentPlayer.name}, ${rentAmount} altın kirayı ödeyemedi ve oyundan çıktı.`,
+      type: 'error'
+    });
+
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(currentPlayer, rentAmount, owner);
+    get().handleBankruptcy(currentPlayer.id);
     return;
   }
 

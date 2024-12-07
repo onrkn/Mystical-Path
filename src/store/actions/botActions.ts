@@ -4,12 +4,18 @@ import { handleBotPropertyUpgrades } from '../../utils/botUtils';
 
 export const handleBotActions = (set: SetState<GameState>, get: GetState<GameState>) => ({
   handleBotTurn: async () => {
-    const { players, currentPlayerIndex } = get();
+    const { players, currentPlayerIndex, isBotTurnInProgress } = get();
     const currentPlayer = players[currentPlayerIndex];
     
+    // Eğer zaten bir bot turu devam ediyorsa, yeni bir tur başlatma
+    if (isBotTurnInProgress) return;
+
     if (!currentPlayer?.isBot) return;
 
     try {
+      // Bot turu başladığını işaretle
+      set({ isBotTurnInProgress: true });
+
       // Clear any lingering states
       set({ 
         isRolling: false,
@@ -59,14 +65,9 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
           players: [...players],
           currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
           waitingForDecision: false,
-          isRolling: false
+          isRolling: false,
+          isBotTurnInProgress: false
         });
-
-        // If next player is bot, continue bot chain after a delay
-        const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-        if (nextPlayer?.isBot) {
-          setTimeout(() => get().handleBotTurn(), 1500);
-        }
       }
     } catch (error) {
       console.error('Error in handleBotTurn:', error);
@@ -74,8 +75,12 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
       set({ 
         currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
         waitingForDecision: false,
-        isRolling: false
+        isRolling: false,
+        isBotTurnInProgress: false
       });
+    } finally {
+      // Bot turu bittiğinde bayrağı kaldır
+      set({ isBotTurnInProgress: false });
 
       // If next player is bot, continue bot chain after a delay
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];

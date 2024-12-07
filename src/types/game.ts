@@ -8,6 +8,7 @@ export interface GameState {
   gameLog: string[];
   alliances: Alliance[];
   isRolling: boolean;
+  isBotTurnInProgress: boolean;
   showPropertyDialog: boolean;
   showBossDialog: boolean;
   showMarketDialog: boolean;

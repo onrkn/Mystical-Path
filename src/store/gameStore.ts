@@ -22,10 +22,12 @@ const initialState: GameState = {
   gameStarted: false,
   winner: null,
   lastDiceRoll: null,
+  lastDiceRoll2: null,
   gameMessage: '',
   gameLog: [],
   alliances: [],
   isRolling: false,
+  isBotTurnInProgress: false,  // Bayrağın başlangıç değerini false olarak ayarla
   showPropertyDialog: false,
   showBossDialog: false,
   showMarketDialog: false,

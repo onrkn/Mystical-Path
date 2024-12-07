@@ -5,5 +5,10 @@ export const defaultSettings: GameSettings = {
   passingStartBonus: 100,
   propertyPriceMultiplier: 1,
   propertyRentMultiplier: 1,
-  kingEnabled: true,
+  kingEnabled: false,
+  weatherEnabled: true,
+  botDifficulty: 'normal',
+  soundEnabled: true,
+  musicVolume: 50,
+  sfxVolume: 50
 };

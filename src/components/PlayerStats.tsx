@@ -6,36 +6,80 @@ import { calculateStrength } from '../utils/playerUtils';
 import { squares } from '../data/board';
 
 export function PlayerStats() {
-  const { players, currentPlayerIndex, upgradeProperty, kingPosition } = useGameStore();
+  const { 
+    players, 
+    currentPlayerIndex, 
+    upgradeProperty, 
+    kingPosition,
+    weather,
+    settings
+  } = useGameStore();
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [propertyRents, setPropertyRents] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
-    // Kral'ın bulunduğu kareyi bul
-    const kingSquare = squares.find(s => s.id === kingPosition);
-    
+    const calculateRent = (property) => {
+      // Temel kira hesaplaması (seviye bonusu)
+      let rent = property.baseRent * (1 + ((property.level - 1) * 0.2));
+      
+      // Ayarlar çarpanı
+      rent = rent * settings.propertyRentMultiplier;
+      
+      // Hava durumu etkisi
+      if (weather === 'rain' && settings.weatherEnabled) {
+        rent = rent * 0.5;
+      }
+      
+      // Kral bonusu kontrolü
+      const kingSquare = squares.find(s => s.id === kingPosition);
+      const isKingHere = kingSquare?.property?.id === property.id;
+      if (isKingHere) {
+        rent = rent * 10;
+      }
+      
+      return Math.floor(rent);
+    };
+
     const newRents: {[key: string]: number} = {};
     players.forEach(player => {
       player.properties?.forEach(property => {
-        // Temel kirayı hesapla (%20 artış ile)
-        const baseRent = property.baseRent * (1 + ((property.level - 1) * 0.2));
-        
-        // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
-        const isKingHere = kingSquare?.property?.id === property.id;
-        newRents[property.id] = isKingHere ? baseRent * 10 : baseRent;
+        newRents[property.id] = calculateRent(property);
       });
     });
     setPropertyRents(newRents);
-  }, [kingPosition, players]);
+  }, [kingPosition, players, weather, settings]);
 
   if (!players || players.length === 0) {
     return null;
   }
 
   const calculateNextRent = (property) => {
-    if (property.level >= 5) return property.baseRent * (1 + ((5 - 1) * 0.2));
-    const nextLevelRent = property.baseRent * (1 + (property.level * 0.2));
-    return nextLevelRent;
+    if (property.level >= 5) return propertyRents[property.id];
+    
+    // Bir sonraki seviye için hesaplama
+    const nextLevelProperty = {...property, level: property.level + 1};
+    const calculateRent = (property) => {
+      // Temel kira hesaplaması (seviye bonusu)
+      let rent = property.baseRent * (1 + ((property.level - 1) * 0.2));
+      
+      // Ayarlar çarpanı
+      rent = rent * settings.propertyRentMultiplier;
+      
+      // Hava durumu etkisi
+      if (weather === 'rain' && settings.weatherEnabled) {
+        rent = rent * 0.5;
+      }
+      
+      // Kral bonusu kontrolü
+      const kingSquare = squares.find(s => s.id === kingPosition);
+      const isKingHere = kingSquare?.property?.id === property.id;
+      if (isKingHere) {
+        rent = rent * 10;
+      }
+      
+      return Math.floor(rent);
+    };
+    return calculateRent(nextLevelProperty);
   };
 
   return (
@@ -97,11 +141,9 @@ export function PlayerStats() {
                       <h3 className="text-sm font-medium mb-2">Mülkler:</h3>
                       <div className="space-y-2">
                         {playerProperties.map(property => {
-                          // Kral'ın bulunduğu kareyi bul
+                          const currentRent = propertyRents[property.id];
                           const kingSquare = squares.find(s => s.id === kingPosition);
-                          // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
                           const isKingHere = kingSquare?.property?.id === property.id;
-                          const currentRent = propertyRents[property.id] || (property.baseRent * (1 + ((property.level - 1) * 0.2)));
 
                           return (
                             <div key={property.id} className="bg-white p-2 rounded border text-sm">
@@ -110,7 +152,10 @@ export function PlayerStats() {
                                 <span className="text-gray-500">Seviye {property.level}</span>
                               </div>
                               <div className="text-gray-600">
-                                Kira: {Math.floor(property.baseRent * (1 + ((property.level - 1) * 0.2)) * (isKingHere ? 10 : 1))} 💎
+                                Kira: {currentRent} 💎
+                                {weather === 'rain' && settings.weatherEnabled && (
+                                  <span className="ml-1 text-blue-500 font-medium">(-50%)</span>
+                                )}
                                 {isKingHere && (
                                   <span className="ml-1 text-yellow-500 font-bold">(x10)</span>
                                 )}

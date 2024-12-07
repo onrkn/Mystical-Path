@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PlayerSetup } from './components/PlayerSetup';
 import { GameBoard } from './components/GameBoard';
 import { GameSettings } from './components/GameSettings';
@@ -10,11 +10,13 @@ import { RentPaymentDialog } from './components/RentPaymentDialog';
 import { BankruptcyDialog } from './components/BankruptcyDialog';
 import { CombatAnimation } from './components/CombatAnimation';
 import { Notification } from './components/Notification';
+import { WeatherEffect } from './components/WeatherEffect';
+import { WeatherIndicator } from './components/WeatherIndicator';
 import { useGameStore } from './store/gameStore';
 
 export default function App() {
   const { 
-    gameStarted,
+    gameStarted, 
     showSettings,
     showBossDialog,
     showMarketDialog,
@@ -27,12 +29,39 @@ export default function App() {
     rentInfo,
     bankruptPlayer,
     players,
-    settings
+    settings,
+    weather,
+    startWeatherSystem 
   } = useGameStore();
+
+  useEffect(() => {
+    // Oyun başladığında ve ayarlar değiştiğinde weather sistemini başlat
+    useGameStore.getState().initializeWeatherSystem();
+
+    // Ayarlar değiştiğinde weather sistemini yeniden başlat
+    const unsubscribe = useGameStore.subscribe(
+      (state) => state.settings.weatherEnabled,
+      (weatherEnabled) => {
+        if (weatherEnabled) {
+          useGameStore.getState().startWeatherSystem();
+        } else {
+          useGameStore.getState().stopWeatherSystem();
+          useGameStore.getState().updateWeather('none');
+        }
+      }
+    );
+
+    return () => {
+      unsubscribe();
+      useGameStore.getState().stopWeatherSystem();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <WeatherEffect type={weather} />
       <Notification />
+      {gameStarted && <WeatherIndicator />}
       {showCombatAnimation?.visible && (
         <CombatAnimation
           isVisible={showCombatAnimation.visible}

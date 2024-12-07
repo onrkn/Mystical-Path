@@ -33,12 +33,40 @@ const squareIcons = {
 };
 
 export function BoardSquare({ square, players }: BoardSquareProps) {
-  const { players: allPlayers, kingPosition, settings } = useGameStore();
+  const { 
+    players: allPlayers, 
+    currentPlayerIndex,
+    kingPosition,
+    weather,
+    settings
+  } = useGameStore();
   const Icon = squareIcons[square.type];
   const owner = square.property?.ownerId ? allPlayers.find(p => p.id === square.property?.ownerId) : null;
 
   // Kral özelliği açık ve kral bu karede ise true
   const isKingOnSquare = settings.kingEnabled && kingPosition === square.id;
+
+  const calculateRent = (square: Square) => {
+    if (!square.property) return 0;
+    
+    // Temel kira hesaplaması (seviye bonusu)
+    let rent = square.property.baseRent * (1 + ((square.property.level - 1) * 0.2));
+    
+    // Ayarlar çarpanı
+    rent = rent * settings.propertyRentMultiplier;
+    
+    // Hava durumu etkisi
+    if (weather === 'rain' && settings.weatherEnabled) {
+      rent = rent * 0.5;
+    }
+    
+    // Kral bonusu
+    if (kingPosition === square.id) {
+      rent = rent * 10;
+    }
+    
+    return Math.floor(rent);
+  };
 
   const squareStyle = {
     position: 'relative',
@@ -107,9 +135,10 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
             </>
           ) : (
             <div className="text-gray-600">
-              Kira: {isKingOnSquare ? 
-                Math.floor(square.property.baseRent * (1 + ((square.property.level - 1) * 0.2)) * 10 * settings.propertyRentMultiplier) : 
-                Math.floor(square.property.baseRent * (1 + ((square.property.level - 1) * 0.2)) * settings.propertyRentMultiplier)} 💎
+              Kira: {calculateRent(square)} 💎
+              {weather === 'rain' && settings.weatherEnabled && (
+                <span className="ml-1 text-blue-500 font-medium">(-50%)</span>
+              )}
             </div>
           )}
         </div>

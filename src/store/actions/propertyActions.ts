@@ -1,12 +1,36 @@
-import type { GetState, SetState } from 'zustand';
-import type { GameState, Property } from '../../types/game';
-import { calculateItemBonuses } from '../utils/itemUtils';
+import { GetState, SetState } from 'zustand';
+import { GameState, Property } from '../../types/game';
 import { handleBankruptcy } from '../utils/playerUtils';
 import { squares } from '../../data/board';
+import { calculateItemBonuses } from '../utils/itemUtils';
+
+export const calculateRent = (property: Property, get: GetState<GameState>) => {
+  const { weather, settings, kingPosition } = get();
+  
+  // Temel kira hesaplaması (seviye bonusu)
+  let rent = property.baseRent * (1 + ((property.level - 1) * 0.2));
+  
+  // Ayarlar çarpanı
+  rent = rent * settings.propertyRentMultiplier;
+  
+  // Hava durumu etkisi
+  if (weather === 'rain' && settings.weatherEnabled) {
+    rent = rent * 0.5;
+  }
+  
+  // Kral bonusu kontrolü
+  const kingSquare = squares.find(s => s.id === kingPosition);
+  const isKingHere = kingSquare?.property?.id === property.id;
+  if (isKingHere && settings.kingEnabled) {
+    rent = rent * 10;
+  }
+  
+  return Math.floor(rent);
+};
 
 export const handlePropertyActions = (set: SetState<GameState>, get: GetState<GameState>) => ({
   purchaseProperty: (property: Property) => {
-    const { players, currentPlayerIndex, settings } = get();
+    const { players, currentPlayerIndex } = get();
     const currentPlayer = players[currentPlayerIndex];
     
     // Find the square with this property
@@ -30,8 +54,8 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
       currentPlayer.properties.push(property);
       property.ownerId = currentPlayer.id;
       
-      // Apply rent multiplier from settings when purchasing
-      property.rent = Math.floor(property.baseRent * settings.propertyRentMultiplier);
+      // Apply rent calculation
+      property.rent = calculateRent(property, get);
       
       // Add XP for property purchase
       currentPlayer.xp += 10;
@@ -64,17 +88,17 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
     const currentPlayer = players[currentPlayerIndex];
     const property = currentPlayer.properties.find(p => p.id === propertyId);
     
-    if (property && property.level < 5 && currentPlayer.coins >= property.upgradePrice) {
-      currentPlayer.coins -= property.upgradePrice;
-      currentPlayer.propertyUpgrades += property.upgradePrice;
+    if (property && property.level < 5 && currentPlayer.coins >= 50) {
+      currentPlayer.coins -= 50;
+      currentPlayer.propertyUpgrades += 50;
       property.level++;
       
-      // Calculate new rent with both level bonus and settings multiplier
+      // Calculate new rent with level bonus
       const levelBonus = 1 + (property.level * 0.2); // 20% increase per level
-      property.rent = Math.floor(property.baseRent * levelBonus * settings.propertyRentMultiplier);
+      property.rent = calculateRent(property, get);
       
-      // Update upgrade price for next level
-      property.upgradePrice = Math.floor(property.upgradePrice * 1.5);
+      // Upgrade price remains constant at 50
+      property.upgradePrice = 50;
       
       get().showNotification({
         title: 'Mülk Geliştirildi',
@@ -88,27 +112,30 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
   },
 
   payRent: (player: GameState['players'][0], owner: GameState['players'][0], amount: number) => {
-    const { players, currentPlayerIndex } = get();
+    const { players, currentPlayerIndex, weather } = get();
+    
+    // Yağmur varsa kirayı %50 düşür
+    const finalAmount = weather === 'rain' ? Math.floor(amount * 0.5) : amount;
     
     // Oyuncunun kira ödeyecek yeterli altını yoksa
-    if (player.coins < amount) {
+    if (player.coins < finalAmount) {
       // Eğer altın miktarı negatife düşecekse direkt iflas et
-      handleBankruptcy(player, amount, owner, get, set);
+      handleBankruptcy(player, finalAmount, owner, get, set);
       return;
     }
 
     // Player can afford rent
-    player.coins -= amount;
-    player.rentPaid += amount;
-    owner.coins += amount;
-    owner.rentCollected += amount;
+    player.coins -= finalAmount;
+    player.rentPaid += finalAmount;
+    owner.coins += finalAmount;
+    owner.rentCollected += finalAmount;
     
     get().showNotification({
       title: 'Kira Ödendi',
-      message: `${player.name}, ${owner.name}'e ${amount} altın kira ödedi!`,
+      message: `${player.name}, ${owner.name}'e ${finalAmount} altın kira ödedi!${weather === 'rain' ? ' (Yağmur İndirimi)' : ''}`,
       type: 'info'
     });
-    get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${amount} altın kira ödedi!</span>`);
+    get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${finalAmount} altın kira ödedi!${weather === 'rain' ? ' (Yağmur İndirimi)' : ''}</span>`);
 
     set({
       players: [...players],

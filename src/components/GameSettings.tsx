@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { CloudRain } from './icons/CloudRain';
+import { Switch } from './Switch';
+import { HelpCircle } from './icons/HelpCircle';
+import { Tooltip, TooltipTrigger, TooltipContent } from './Tooltip';
 
 export function GameSettings() {
   const { settings, updateSettings } = useGameStore();
@@ -90,6 +94,41 @@ export function GameSettings() {
               max={2}
               step={0.1}
               className="w-full p-2 border rounded-md"
+            />
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-all duration-300 group">
+            <div className="flex items-center space-x-4">
+              <CloudRain className="w-6 h-6 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-blue-800 flex items-center">
+                  Hava Durumu Sistemi
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 ml-2 text-blue-500 hover:text-blue-700" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Hava durumu sistemi oyunun dinamikliğini artırır.</p>
+                      <p>Yağmur yağdığında tüm kira gelirleri %50 düşer.</p>
+                      <p>Açık/kapalı olarak ayarlayabilirsiniz.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </h3>
+                <p className="text-xs text-blue-600">Oyunun hava koşullarını kontrol et</p>
+              </div>
+            </div>
+            <Switch
+              checked={settings.weatherEnabled}
+              onCheckedChange={(checked) => {
+                updateSettings({ weatherEnabled: checked });
+                
+                // Eğer kapatılırsa mevcut yağmuru durdur
+                if (!checked) {
+                  updateWeather('none');
+                }
+              }}
+              activeColor="bg-green-500"
+              inactiveColor="bg-red-500"
             />
           </div>
 

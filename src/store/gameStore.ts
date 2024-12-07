@@ -12,6 +12,7 @@ import { getBotMarketDecision } from '../utils/botAI';
 import { movePlayer } from './utils/movePlayer';
 import { handleSquareAction } from './actions/squareActions';
 import { generatePlayerColor } from '../utils/playerUtils';
+import { calculateRent } from './actions/propertyActions';
 
 const initialState: GameState = {
   players: [],
@@ -39,7 +40,8 @@ const initialState: GameState = {
   isMoving: false,
   rentInfo: null,
   bankruptPlayer: null,
-  kingPosition: 0
+  kingPosition: 0,
+  weather: 'none'
 };
 
 const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) => void, get: () => GameState) => {
@@ -484,15 +486,109 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 };
 
 const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
-  console.log(' UPDATING KING POSITION:', {
-    'New Position': position,
-    'Square': squares.find(s => s.id === position)
+  // Mevcut oyuncuları al
+  const { players } = get();
+  
+  // Kral pozisyonunu güncelle
+  set({ kingPosition: position });
+  
+  // Tüm oyuncuların mülklerinin kiralarını yeniden hesapla
+  players.forEach(player => {
+    player.properties.forEach(property => {
+      property.rent = calculateRent(property, get);
+    });
   });
   
-  set((state) => ({
-    ...state,
-    kingPosition: position
-  }));
+  // Oyuncuları güncelle
+  set({ players: [...players] });
+};
+
+const updateWeather = (weather: GameState['weather'], set: (state: any) => void, get: () => GameState) => {
+  // Hava durumu ayarı kapalıysa hiçbir şey yapma
+  if (!get().settings.weatherEnabled) return;
+
+  const { players } = get();
+  set({ weather });
+  
+  // Tüm mülklerin kiralarını güncelle
+  players.forEach(player => {
+    player.properties?.forEach(property => {
+      property.rent = calculateRent(property, get);
+    });
+  });
+  set({ players: [...players] });
+  
+  if (weather === 'rain') {
+    get().addToLog(`<span class="text-blue-500">Yağmur başladı! Tüm kiralar %50 düşük.</span>`);
+    get().showNotification({
+      title: 'Hava Durumu',
+      message: 'Yağmur başladı! Tüm kiralar %50 düşük.',
+      type: 'info'
+    });
+  } else {
+    get().addToLog(`<span class="text-yellow-500">Yağmur durdu! Kiralar normale döndü.</span>`);
+    get().showNotification({
+      title: 'Hava Durumu',
+      message: 'Yağmur durdu! Kiralar normale döndü.',
+      type: 'info'
+    });
+  }
+};
+
+// Weather system constants
+const WEATHER_CHANGE_INTERVAL = 2 * 60 * 1000; // 2 dakika
+const RAIN_DURATION = 30 * 1000; // 30 saniye
+const RAIN_COOLDOWN = 2 * 60 * 1000; // 2 dakika
+
+let weatherTimeout: NodeJS.Timeout | null = null;
+let rainCooldownTimeout: NodeJS.Timeout | null = null;
+
+const startWeatherSystem = (set: (state: any) => void, get: () => GameState) => {
+  // Hava durumu ayarı kapalıysa başlatma
+  if (!get().settings.weatherEnabled) return;
+
+  const changeWeather = () => {
+    // Hava durumu ayarı hala açıksa devam et
+    if (!get().settings.weatherEnabled) {
+      stopWeatherSystem();
+      return;
+    }
+
+    // Yağmur için cooldown kontrolü
+    if (get().weather === 'none') {
+      updateWeather('rain', set, get);
+      
+      // Yağmuru 30 saniye sonra durdur
+      rainCooldownTimeout = setTimeout(() => {
+        updateWeather('none', set, get);
+        
+        // Sonraki hava değişimi için zamanlayıcı
+        weatherTimeout = setTimeout(changeWeather, WEATHER_CHANGE_INTERVAL);
+      }, RAIN_DURATION);
+    }
+  };
+
+  // İlk hava değişimi zamanlayıcısını kur
+  weatherTimeout = setTimeout(changeWeather, WEATHER_CHANGE_INTERVAL);
+};
+
+const stopWeatherSystem = () => {
+  if (weatherTimeout) {
+    clearTimeout(weatherTimeout);
+    weatherTimeout = null;
+  }
+  if (rainCooldownTimeout) {
+    clearTimeout(rainCooldownTimeout);
+    rainCooldownTimeout = null;
+  }
+};
+
+// Oyun başladığında ve ayarlar değiştiğinde weather sistemini kontrol et
+const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState) => {
+  // Hava durumu ayarı açıksa sistemi başlat
+  if (get().settings.weatherEnabled) {
+    startWeatherSystem(set, get);
+  }
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -531,7 +627,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
   }),
   updateKingPosition: (position: number) => updateKingPosition(position, set, get),
-  handlePropertyRent: (currentPlayer: any, square: any) => handlePropertyRent(currentPlayer, square, set, get)
+  handlePropertyRent: (currentPlayer: any, square: any) => handlePropertyRent(currentPlayer, square, set, get),
+  updateWeather: (weather: GameState['weather']) => updateWeather(weather, set, get),
+  startWeatherSystem: () => startWeatherSystem(set, get),
+  stopWeatherSystem: () => stopWeatherSystem(),
+  initializeWeatherSystem: () => initializeWeatherSystem(set, get)
 }));
 
 export default useGameStore;

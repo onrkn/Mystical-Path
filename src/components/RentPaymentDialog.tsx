@@ -24,8 +24,16 @@ export function RentPaymentDialog({ property, owner, player }: RentPaymentDialog
 
   const handlePayRent = () => {
     if (isProcessing) return;
+    
+    // Kirayı ödeyecek yeterli parası yoksa
+    if (player.coins < rentAmount) {
+      // İflas mekanizmasını çağır
+      useGameStore.getState().handleBankruptcy(player, rentAmount, owner);
+      return;
+    }
+
     setIsProcessing(true);
-    payRent(player, owner, rentAmount);
+    useGameStore.getState().payRent(player, owner, rentAmount);
     // Dialog will be closed by the payRent action
   };
 

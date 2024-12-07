@@ -623,9 +623,9 @@ const handleBankruptcy = (
   }).filter(Boolean); // Null oyuncuları filtrele
 
   // Log ve bildirim
-  get().addToLog(`<span class="text-red-500">${bankruptPlayer.name} iflas etti ve oyundan çıktı! Mülkleri sahipsiz kaldı.</span>`);
+  get().addToLog(`<span class="text-red-600">💥 ${bankruptPlayer.name} iflas etti ve oyundan çıktı!</span>`);
   get().showNotification({
-    title: 'İflas!',
+    title: 'İFLAS!',
     message: `${bankruptPlayer.name} oyuncusu iflas etti ve oyundan çıktı. Mülkleri sahipsiz kaldı.`,
     type: 'error'
   });
@@ -654,6 +654,40 @@ const handleBankruptcy = (
     if (nextPlayer.isBot) {
       setTimeout(() => get().handleBotTurn(), 1000);
     }
+  }
+};
+
+const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) => void, get: () => GameState) => {
+  // Oyuncunun kirayı ödeyecek yeterli parası yoksa
+  if (player.coins < rentAmount) {
+    // İflas mekanizmasını çağır
+    get().handleBankruptcy(player, rentAmount, owner);
+    return;
+  }
+
+  // Normal kira ödeme işlemi
+  player.coins -= rentAmount;
+  player.rentPaid += rentAmount;
+  
+  owner.coins += rentAmount;
+  owner.rentCollected += rentAmount;
+
+  // Log ve bildirim
+  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+
+  // Oyun durumunu güncelle
+  set({
+    players: [...get().players],
+    showRentDialog: false,
+    rentInfo: null,
+    waitingForDecision: false,
+    currentPlayerIndex: (get().currentPlayerIndex + 1) % get().players.length
+  });
+
+  // Sonraki oyuncu bot ise bot turunu başlat
+  const nextPlayer = get().players[(get().currentPlayerIndex + 1) % get().players.length];
+  if (nextPlayer.isBot) {
+    setTimeout(() => get().handleBotTurn(), 1000);
   }
 };
 
@@ -698,7 +732,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   startWeatherSystem: () => startWeatherSystem(set, get),
   stopWeatherSystem: () => stopWeatherSystem(),
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
-  handleBankruptcy: (bankruptPlayer: any, rentAmount: number, owner: any) => handleBankruptcy(bankruptPlayer, rentAmount, owner, get, set)
+  handleBankruptcy: (bankruptPlayer: any, rentAmount: number, owner: any) => handleBankruptcy(bankruptPlayer, rentAmount, owner, get, set),
+  payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get)
 }));
 
 export default useGameStore;

@@ -70,7 +70,7 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
       property.level++;
       
       // Calculate new rent with both level bonus and settings multiplier
-      const levelBonus = 1 + ((property.level - 1) * 0.2); // 20% increase per level
+      const levelBonus = 1 + (property.level * 0.2); // 20% increase per level
       property.rent = Math.floor(property.baseRent * levelBonus * settings.propertyRentMultiplier);
       
       // Update upgrade price for next level

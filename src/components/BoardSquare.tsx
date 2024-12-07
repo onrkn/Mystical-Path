@@ -108,8 +108,8 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
           ) : (
             <div className="text-gray-600">
               Kira: {isKingOnSquare ? 
-                Math.floor(square.property.baseRent * square.property.level * 10 * settings.propertyRentMultiplier) : 
-                Math.floor(square.property.baseRent * square.property.level * settings.propertyRentMultiplier)} 💎
+                Math.floor(square.property.baseRent * (1 + ((square.property.level - 1) * 0.2)) * 10 * settings.propertyRentMultiplier) : 
+                Math.floor(square.property.baseRent * (1 + ((square.property.level - 1) * 0.2)) * settings.propertyRentMultiplier)} 💎
             </div>
           )}
         </div>

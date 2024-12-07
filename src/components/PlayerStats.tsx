@@ -17,8 +17,8 @@ export function PlayerStats() {
     const newRents: {[key: string]: number} = {};
     players.forEach(player => {
       player.properties?.forEach(property => {
-        // Temel kirayı hesapla (seviye ile çarpılmış hali)
-        const baseRent = property.baseRent * property.level;
+        // Temel kirayı hesapla (%20 artış ile)
+        const baseRent = property.baseRent * (1 + ((property.level - 1) * 0.2));
         
         // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
         const isKingHere = kingSquare?.property?.id === property.id;
@@ -33,8 +33,8 @@ export function PlayerStats() {
   }
 
   const calculateNextRent = (property) => {
-    if (property.level >= 5) return property.baseRent * property.level;
-    const nextLevelRent = property.baseRent * (property.level + 1);
+    if (property.level >= 5) return property.baseRent * (1 + ((5 - 1) * 0.2));
+    const nextLevelRent = property.baseRent * (1 + (property.level * 0.2));
     return nextLevelRent;
   };
 
@@ -101,7 +101,7 @@ export function PlayerStats() {
                           const kingSquare = squares.find(s => s.id === kingPosition);
                           // Kral'ın bulunduğu karenin property ID'si ile karşılaştır
                           const isKingHere = kingSquare?.property?.id === property.id;
-                          const currentRent = propertyRents[property.id] || (property.baseRent * property.level);
+                          const currentRent = propertyRents[property.id] || (property.baseRent * (1 + ((property.level - 1) * 0.2)));
 
                           return (
                             <div key={property.id} className="bg-white p-2 rounded border text-sm">
@@ -110,7 +110,7 @@ export function PlayerStats() {
                                 <span className="text-gray-500">Seviye {property.level}</span>
                               </div>
                               <div className="text-gray-600">
-                                Kira: {currentRent} 💎
+                                Kira: {Math.floor(property.baseRent * (1 + ((property.level - 1) * 0.2)) * (isKingHere ? 10 : 1))} 💎
                                 {isKingHere && (
                                   <span className="ml-1 text-yellow-500 font-bold">(x10)</span>
                                 )}

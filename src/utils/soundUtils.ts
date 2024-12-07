@@ -1,14 +1,85 @@
 import { Howl } from 'howler';
 import { useGameStore } from '../store/gameStore';
 
+// Ses efektlerini saklamak için cache
+const soundCache: { [key: string]: Howl } = {};
+
 export const SOUND_EFFECTS = {
   DICE_ROLL: '/sounds/dice-roll.mp3',
   SWITCH: '/sounds/switch.mp3',
   BUTTON_CLICK: '/sounds/button-click.mp3',
   PURCHASE: '/sounds/purchase.mp3',
-  MAGIC_SHOP_PURCHASE: '/sounds/magic-shop-purchase.mp3', 
+  MAGIC_SHOP_PURCHASE: '/sounds/magic-shop-purchase.mp3',
   // Diğer ses efektleri buraya eklenebilir
 };
+
+// Ses önbelleğini temizle
+export function clearSoundCache() {
+  Object.values(soundCache).forEach(sound => {
+    try {
+      sound.unload();
+    } catch (error) {
+      console.error('Ses önbelleği temizlenirken hata:', error);
+    }
+  });
+  
+  // Önbelleği sıfırla
+  Object.keys(soundCache).forEach(key => {
+    delete soundCache[key];
+  });
+}
+
+// Ses efektini yükle ve çal
+function loadAndPlaySound(soundPath: string, volume: number = 0.5): void {
+  // Ses efektleri ayarı kapalıysa çalma
+  const soundEffectsEnabled = useGameStore.getState().settings.soundEffectsEnabled;
+  if (!soundEffectsEnabled) return;
+
+  console.log('Ses çalınmaya çalışılıyor:', soundPath);
+
+  // Ses efekti zaten yüklüyse, direkt çal
+  if (soundCache[soundPath]) {
+    try {
+      // Önce mevcut sesi durdur ve kaldır
+      soundCache[soundPath].stop();
+      soundCache[soundPath].unload();
+      delete soundCache[soundPath];
+    } catch (error) {
+      console.error('Önbellek temizleme hatası:', error);
+    }
+  }
+
+  // Yeni ses efekti oluştur
+  try {
+    const sound = new Howl({
+      src: [soundPath],
+      html5: true, // HTML5 Audio kullan
+      volume: volume,
+      preload: true, // Otomatik preload
+      onload: () => {
+        console.log('Ses başarıyla yüklendi');
+        sound.play();
+      },
+      onloaderror: (id, err) => {
+        console.error('Ses yükleme hatası:', err);
+        console.error('Ses yolu:', soundPath);
+      },
+      onplayerror: (id, err) => {
+        console.error('Ses çalma hatası:', err);
+        sound.unload(); // Hata durumunda sesi kaldır
+      },
+      onend: () => {
+        console.log('Ses çalma tamamlandı');
+        sound.unload(); // Çalma bitince sesi kaldır
+      }
+    });
+
+    // Cache'e ekle
+    soundCache[soundPath] = sound;
+  } catch (error) {
+    console.error('Ses oluşturma hatası:', error);
+  }
+}
 
 export const MUSIC_TRACKS = {
   THEME: '/sounds/theme-music.mp3'
@@ -73,28 +144,9 @@ export function stopBackgroundMusic() {
 }
 
 export function playSoundEffect(soundName: string, volume: number = 0.5) {
-  // Ses efektleri ayarı kapalıysa çalma
-  const soundEffectsEnabled = useGameStore.getState().settings.soundEffectsEnabled;
-  if (!soundEffectsEnabled) return;
-
-  console.log('Playing sound effect:', soundName);
-
-  const sound = new Howl({
-    src: [soundName],
-    html5: false, // Web Audio API kullan
-    volume: volume,
-    format: ['mp3'],
-    onload: () => console.log('Sound loaded successfully'),
-    onloaderror: (id, err) => {
-      console.error('Sound load error:', err);
-      console.error('Sound path:', soundName);
-    },
-    onplayerror: (id, err) => console.error('Sound play error:', err)
-  });
-
-  sound.once('load', () => {
-    sound.play();
-  });
+  // Her ses çalma işleminden önce önbelleği temizle
+  clearSoundCache();
+  loadAndPlaySound(soundName, volume);
 }
 
 export function playSwitchSound() {

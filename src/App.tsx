@@ -11,6 +11,7 @@ import { BankruptcyDialog } from './components/BankruptcyDialog';
 import { Notification } from './components/Notification';
 import { WeatherEffect } from './components/WeatherEffect';
 import { WeatherIndicator } from './components/WeatherIndicator';
+import { CombatAnimation } from './components/CombatAnimation';
 import { useGameStore } from './store/gameStore';
 import { playBackgroundMusic, stopBackgroundMusic } from './utils/soundUtils';
 import { playButtonClickSound } from './utils/soundUtils';
@@ -93,11 +94,18 @@ export default function App() {
       <Notification />
       {gameStarted && <WeatherIndicator />}
       {showCombatAnimation?.visible && (
-        <CombatAnimation
-          isVisible={showCombatAnimation.visible}
-          won={showCombatAnimation.won}
-          reward={showCombatAnimation.reward}
-        />
+        <div>
+          {console.log('CombatAnimation props:', {
+            isVisible: showCombatAnimation.visible,
+            won: showCombatAnimation.won,
+            reward: showCombatAnimation.reward
+          })}
+          <CombatAnimation
+            isVisible={showCombatAnimation.visible}
+            won={showCombatAnimation.won}
+            reward={showCombatAnimation.reward}
+          />
+        </div>
       )}
       <header className="bg-gradient-to-r from-purple-800 to-blue-900 text-white py-6 mb-8">
         <div className="container mx-auto px-4">

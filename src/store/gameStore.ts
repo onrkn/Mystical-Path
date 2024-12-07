@@ -679,15 +679,16 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
     return;
   }
 
-  // Normal kira ödeme işlemi
+  // Kirayı öde
   player.coins -= rentAmount;
-  player.rentPaid += rentAmount;
-  
   owner.coins += rentAmount;
-  owner.rentCollected += rentAmount;
+  player.rentPaid += rentAmount;
 
   // Log ve bildirim
-  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'a ${rentAmount} altın kira ödedi.</span>`);
+
+  // İflas kontrolü
+  get().checkPlayerBankruptcy(player);
 
   // Oyun durumunu güncelle
   set({
@@ -712,6 +713,22 @@ const toggleMarketMusic = (show: boolean) => {
   } else {
     // Market kapanırken müziği durdur
     MARKET_MUSIC.stop();
+  }
+};
+
+const checkPlayerBankruptcy = (player: any, set: (state: any) => void, get: () => GameState) => {
+  // Oyuncunun parası 0 veya 0'ın altındaysa iflas et
+  if (player.coins <= 0) {
+    get().addToLog(`<span class="text-red-600">💥 ${player.name} iflas etti! Parası ${player.coins} altına düştü.</span>`);
+    
+    get().showNotification({
+      title: 'İFLAS!',
+      message: `${player.name} iflas etti. Parası ${player.coins} altına düştü.`,
+      type: 'error'
+    });
+
+    // İflas mekanizmasını çağır
+    get().handleBankruptcy(player.id, set, get);
   }
 };
 
@@ -758,7 +775,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
   handleBankruptcy: (playerId: string) => handleBankruptcy(playerId, set, get),
   payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
-  toggleMarketMusic: (show: boolean) => toggleMarketMusic(show)
+  toggleMarketMusic: (show: boolean) => toggleMarketMusic(show),
+  checkPlayerBankruptcy: (player: any) => checkPlayerBankruptcy(player, set, get)
 }));
 
 export default useGameStore;

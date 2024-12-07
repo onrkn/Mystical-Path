@@ -194,6 +194,9 @@ export async function handleSquareAction(
         });
         get().addToLog(`<span class="text-red-500">${player.name}: ${cezaMessage}</span>`);
         
+        // İflas kontrolü
+        get().checkPlayerBankruptcy(player);
+        
         // Add delay before advancing turn
         setTimeout(() => advanceToNextPlayer(get, set), 1500);
         break;

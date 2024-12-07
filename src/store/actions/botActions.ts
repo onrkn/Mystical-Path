@@ -11,7 +11,10 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
     if (isBotTurnInProgress) return;
 
     // Oyuncu iflas etmişse veya oyun dışındaysa atla
-    if (!currentPlayer || currentPlayer.coins <= 0 || currentPlayer.isBankrupt) {
+    if (!currentPlayer || 
+        currentPlayer.coins <= 0 || 
+        currentPlayer.isBankrupt || 
+        currentPlayer.position === -1) {
       set({ 
         currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
         isBotTurnInProgress: false
@@ -19,7 +22,9 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
       
       // Sonraki oyuncuya geç
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-      if (nextPlayer?.isBot && !nextPlayer.isBankrupt) {
+      if (nextPlayer?.isBot && 
+          !nextPlayer.isBankrupt && 
+          nextPlayer.position !== -1) {
         setTimeout(() => get().handleBotTurn(), 1500);
       }
       return;
@@ -103,7 +108,9 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
 
       // If next player is bot, continue bot chain after a delay
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-      if (nextPlayer?.isBot && !nextPlayer.isBankrupt) {
+      if (nextPlayer?.isBot && 
+          !nextPlayer.isBankrupt && 
+          nextPlayer.position !== -1) {
         setTimeout(() => get().handleBotTurn(), 1500);
       }
     }

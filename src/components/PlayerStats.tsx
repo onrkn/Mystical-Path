@@ -88,6 +88,11 @@ export function PlayerStats() {
         <h2 className="text-2xl font-bold mb-4">Oyuncular</h2>
         <div className="space-y-4">
           {players.map((player, index) => {
+            // İflas eden oyuncuyu kontrol et
+            if (player.isBankrupt || player.position === -1) {
+              return null;
+            }
+
             const strength = calculateStrength(player);
             const playerProperties = player.properties;
 

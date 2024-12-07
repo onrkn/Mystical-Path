@@ -644,7 +644,7 @@ const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState
 
 const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () => GameState) => {
   const state = get();
-  const { players } = state;
+  const { players, squares } = state;
 
   // İflas eden oyuncuyu bul
   const bankruptPlayer = players.find(p => p.id === playerId);
@@ -660,16 +660,21 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
     get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
   }
 
-  // Oyuncunun tüm mülklerini serbest bırak
+  // Oyuncunun tüm mülklerini serbest bırak ve sahibini sıfırla
   bankruptPlayer.properties.forEach(prop => {
-    prop.ownerId = null;
-    prop.level = 1;
+    // Mülkün sahibini sıfırla
+    const squareIndex = squares.findIndex(sq => sq.property?.id === prop.id);
+    if (squareIndex !== -1 && squares[squareIndex].property) {
+      squares[squareIndex].property.ownerId = null;
+      squares[squareIndex].property.level = 1;
+    }
   });
 
   // Oyuncuyu iflas ettir
   bankruptPlayer.isBankrupt = true;
   bankruptPlayer.coins = 0;
   bankruptPlayer.properties = [];
+  bankruptPlayer.position = -1; // Oyun tahtasından çıkar
 
   // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
   const updatedPlayers = players.filter(p => p.id !== playerId);
@@ -695,6 +700,7 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Oyun durumunu güncelle
   set({
     players: updatedPlayers,
+    squares: [...squares],
     currentPlayerIndex: newCurrentPlayerIndex,
     gameMessage: `${bankruptPlayer.name} oyundan elendi!`,
     showRentDialog: false,

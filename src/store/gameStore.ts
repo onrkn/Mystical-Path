@@ -498,8 +498,7 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 };
 
 const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
-  // Mevcut oyuncuları al
-  const { players } = get();
+  const { players, kingPosition } = get();
   
   // Kral pozisyonunu güncelle
   set({ kingPosition: position });
@@ -507,7 +506,15 @@ const updateKingPosition = (position: number, set: (state: any) => void, get: ()
   // Tüm oyuncuların mülklerinin kiralarını yeniden hesapla
   players.forEach(player => {
     player.properties.forEach(property => {
-      property.rent = calculateRent(property, get);
+      // Eğer bu mülk şu anki kral pozisyonunda değilse, normal kira değerini kullan
+      if (property.id !== position) {
+        property.rent = calculateRent(property, get);
+      } else {
+        // Kral bu mülkteyse kira 10 katına çıkar
+        if (get().settings.kingEnabled) {
+          property.rent = calculateRent(property, get) * 10;
+        }
+      }
     });
   });
   

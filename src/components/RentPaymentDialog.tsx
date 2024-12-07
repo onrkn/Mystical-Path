@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Building2, Coins } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
@@ -11,8 +11,8 @@ interface RentPaymentDialogProps {
   player: Player;
 }
 
-export function RentPaymentDialog({ property, owner, player }: RentPaymentDialogProps) {
-  const { payRent, kingPosition, settings } = useGameStore();
+export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialogProps) => {
+  const { kingPosition, settings, payRent } = useGameStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const bonuses = calculateItemBonuses(player);
   
@@ -27,8 +27,12 @@ export function RentPaymentDialog({ property, owner, player }: RentPaymentDialog
     
     // Kirayı ödeyecek yeterli parası yoksa
     if (player.coins < rentAmount) {
-      // İflas mekanizmasını çağır
+      // İflas mekanizmasını çağır ve dialog'u kapat
       useGameStore.getState().handleBankruptcy(player, rentAmount, owner);
+      useGameStore.getState().set({ 
+        showRentDialog: false,
+        rentInfo: null 
+      });
       return;
     }
 
@@ -36,6 +40,25 @@ export function RentPaymentDialog({ property, owner, player }: RentPaymentDialog
     useGameStore.getState().payRent(player, owner, rentAmount);
     // Dialog will be closed by the payRent action
   };
+
+  // Kral pozisyonundaki değişiklikleri izle
+  useEffect(() => {
+    // Kira miktarını her kral pozisyonu değişiminde güncelle
+    const baseRent = property.rent;
+    const kingMultiplier = (kingPosition === property.id && settings.kingEnabled) ? 10 : 1;
+    const updatedRentAmount = Math.floor(baseRent * kingMultiplier * (1 - bonuses.rentReduction));
+    
+    // Eğer hesaplanan kira miktarı değişmişse state'i güncelle
+    if (updatedRentAmount !== rentAmount) {
+      // Zustand'ın setState metodunu kullanarak güncelleyelim
+      useGameStore.setState({
+        rentInfo: {
+          ...useGameStore.getState().rentInfo,
+          rentAmount: updatedRentAmount
+        }
+      });
+    }
+  }, [kingPosition, settings.kingEnabled, property.id, property.rent, bonuses.rentReduction]);
 
   const handleOverlayClick = () => {
     // Add your logic here

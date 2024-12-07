@@ -1,18 +1,19 @@
 import React, { useEffect } from 'react';
 import { PlayerSetup } from './components/PlayerSetup';
-import { GameBoard } from './components/GameBoard';
 import { GameSettings } from './components/GameSettings';
+import { GameBoard } from './components/GameBoard';
 import { BossBattle } from './components/BossBattle';
 import { Market } from './components/Market';
 import { PropertyDialog } from './components/PropertyDialog';
 import { AllianceDialog } from './components/AllianceDialog';
 import { RentPaymentDialog } from './components/RentPaymentDialog';
 import { BankruptcyDialog } from './components/BankruptcyDialog';
-import { CombatAnimation } from './components/CombatAnimation';
 import { Notification } from './components/Notification';
 import { WeatherEffect } from './components/WeatherEffect';
 import { WeatherIndicator } from './components/WeatherIndicator';
 import { useGameStore } from './store/gameStore';
+import { playBackgroundMusic, stopBackgroundMusic } from './utils/soundUtils';
+import { playButtonClickSound } from './utils/soundUtils';
 
 export default function App() {
   const { 
@@ -35,10 +36,38 @@ export default function App() {
   } = useGameStore();
 
   useEffect(() => {
+    // Oyun başladığında müziği çal
+    if (gameStarted) {
+      try {
+        console.log('Oyun başladı, müzik çalınacak');
+        
+        // Müzik ayarı açıksa müziği çal
+        if (settings.musicEnabled) {
+          const musicInstance = playBackgroundMusic();
+          
+          // Müziğin gerçekten çalıp çalmadığını kontrol et
+          if (musicInstance) {
+            musicInstance.on('play', () => {
+              console.log('Müzik başarıyla çalıyor');
+            });
+            
+            musicInstance.on('loaderror', (id, err) => {
+              console.error('Müzik yükleme hatası:', err);
+            });
+            
+            musicInstance.on('playerror', (id, err) => {
+              console.error('Müzik çalma hatası:', err);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Müzik çalınırken genel hata:', error);
+      }
+    }
+
     // Oyun başladığında ve ayarlar değiştiğinde weather sistemini başlat
     useGameStore.getState().initializeWeatherSystem();
 
-    // Ayarlar değiştiğinde weather sistemini yeniden başlat
     const unsubscribe = useGameStore.subscribe(
       (state) => state.settings.weatherEnabled,
       (weatherEnabled) => {
@@ -54,8 +83,9 @@ export default function App() {
     return () => {
       unsubscribe();
       useGameStore.getState().stopWeatherSystem();
+      stopBackgroundMusic(); // Müziği durdur
     };
-  }, []);
+  }, [gameStarted, settings.musicEnabled]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -83,7 +113,10 @@ export default function App() {
           <div className="space-y-4">
             <PlayerSetup />
             <button
-              onClick={() => useGameStore.setState({ showSettings: true })}
+              onClick={() => {
+                playButtonClickSound(); // Buton tıklama sesi
+                useGameStore.setState({ showSettings: true });
+              }}
               className="w-full max-w-md mx-auto block bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700"
             >
               Oyun Ayarları
@@ -97,7 +130,9 @@ export default function App() {
         {showBossDialog && <BossBattle />}
         {showMarketDialog && <Market />}
         {showPropertyDialog && selectedProperty && <PropertyDialog property={selectedProperty} />}
-        {showAllianceDialog && <AllianceDialog onClose={() => useGameStore.setState({ showAllianceDialog: false })} />}
+        {showAllianceDialog && (
+          <AllianceDialog onClose={() => useGameStore.setState({ showAllianceDialog: false })} />
+        )}
         {showRentDialog && rentInfo && (
           <RentPaymentDialog
             property={rentInfo.property}

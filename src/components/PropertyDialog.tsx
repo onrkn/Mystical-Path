@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
 import type { Property } from '../types/game';
+import { playPurchaseSound } from '../utils/soundUtils';
 
 interface PropertyDialogProps {
   property: Property;
@@ -13,6 +14,7 @@ export function PropertyDialog({ property }: PropertyDialogProps) {
 
   const handlePurchase = (purchase: boolean) => {
     if (purchase && canAfford) {
+      playPurchaseSound();
       purchaseProperty(property);
     } else {
       // If not purchasing, clear waiting flag and advance turn

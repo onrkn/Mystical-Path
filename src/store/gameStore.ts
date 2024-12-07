@@ -13,6 +13,7 @@ import { movePlayer } from './utils/movePlayer';
 import { handleSquareAction } from './actions/squareActions';
 import { generatePlayerColor } from '../utils/playerUtils';
 import { calculateRent } from './actions/propertyActions';
+import { playSoundEffect, SOUND_EFFECTS } from '../utils/soundUtils';
 
 const initialState: GameState = {
   players: [],
@@ -34,7 +35,11 @@ const initialState: GameState = {
   showCombatAnimation: null,
   selectedProperty: null,
   activeBoss: null,
-  settings: defaultSettings,
+  settings: {
+    ...defaultSettings,
+    musicEnabled: true,     // Varsayılan olarak müzik açık
+    soundEffectsEnabled: true  // Varsayılan olarak ses efektleri açık
+  },
   notifications: [],
   waitingForDecision: false,
   isMoving: false,
@@ -232,6 +237,11 @@ const handleSquareEffect = (playerId: string, set: (state: any) => void, get: ()
 };
 
 const rollDice = async (set: (state: any) => void, get: () => GameState) => {
+  // Zar atma sesi
+  if (get().settings.soundEffectsEnabled) {
+    playSoundEffect(SOUND_EFFECTS.DICE_ROLL);
+  }
+
   const { players, currentPlayerIndex, isMoving, waitingForDecision } = get();
   const currentPlayer = players[currentPlayerIndex];
 
@@ -348,6 +358,8 @@ const loadSavedSettings = () => {
       const parsedSettings = JSON.parse(savedSettings);
       return {
         ...defaultSettings,
+        musicEnabled: parsedSettings.musicEnabled !== undefined ? parsedSettings.musicEnabled : true,
+        soundEffectsEnabled: parsedSettings.soundEffectsEnabled !== undefined ? parsedSettings.soundEffectsEnabled : true,
         ...parsedSettings
       };
     } catch (error) {

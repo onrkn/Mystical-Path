@@ -4,6 +4,7 @@ import { ShoppingBag, RefreshCw, Coins, Sword } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
 import { cn } from '../utils/cn';
+import { playMagicShopPurchaseSound } from '../utils/soundUtils';
 
 export function Market() {
   const [items, setItems] = useState(() => Array(6).fill(null).map(() => generateRandomItem()));
@@ -14,6 +15,7 @@ export function Market() {
 
   const handlePurchase = (item: ReturnType<typeof generateRandomItem>) => {
     if (currentPlayer.coins >= item.value && !hasPurchased) {
+      playMagicShopPurchaseSound();
       equipItem(currentPlayer.id, item);
       setHasPurchased(true);
     }

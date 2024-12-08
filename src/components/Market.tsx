@@ -1,6 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, RefreshCw, Coins, Sword } from 'lucide-react';
+import { 
+  ShoppingBag, 
+  RefreshCw, 
+  Coins, 
+  Sword, 
+  Sparkles, 
+  Star, 
+  Wand2, 
+  BookOpen, 
+  Gem, 
+  Scroll,
+  Shield,
+  Shirt,
+  Crown,
+  Helmet
+} from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
 import { cn } from '../utils/cn';
@@ -15,13 +30,9 @@ export function Market() {
 
   // Market açıldığında müziği başlat ve tema müziğini durdur
   React.useEffect(() => {
-    // Tema müziğini durdur
     stopBackgroundMusic();
-    
-    // Market müziğini başlat
     useGameStore.getState().toggleMarketMusic(true);
     
-    // Bileşen kapandığında müziği durdur
     return () => {
       useGameStore.getState().toggleMarketMusic(false);
     };
@@ -33,20 +44,15 @@ export function Market() {
       equipItem(currentPlayer.id, item);
       setHasPurchased(true);
 
-      // Market müziğini durdur
       useGameStore.getState().toggleMarketMusic(false);
-
-      // Tema müziğini tekrar başlat
       playBackgroundMusic();
 
-      // Market dialog'unu kapat
       useGameStore.setState({ 
         showMarketDialog: false,
         waitingForDecision: false,
         currentPlayerIndex: (currentPlayerIndex + 1) % players.length
       });
 
-      // If next player is bot, trigger bot turn
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
       if (nextPlayer.isBot) {
         setTimeout(() => useGameStore.getState().handleBotTurn(), 1000);
@@ -61,8 +67,8 @@ export function Market() {
       setHasRefreshed(true);
       useGameStore.setState({ players: [...players] });
       useGameStore.getState().showNotification({
-        title: 'Market Yenilendi',
-        message: 'Yeni itemler geldi! (-100 altın)'
+        title: 'Sihirli Envanter Yenilendi',
+        message: 'Gizemli eşyalar ortaya çıktı! (-100 altın)'
       });
     }
   };
@@ -74,13 +80,9 @@ export function Market() {
       currentPlayerIndex: (currentPlayerIndex + 1) % players.length
     });
 
-    // Market müziğini durdur
     useGameStore.getState().toggleMarketMusic(false);
-
-    // Tema müziğini tekrar başlat
     playBackgroundMusic();
 
-    // If next player is bot, trigger bot turn
     const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
     if (nextPlayer.isBot) {
       setTimeout(() => useGameStore.getState().handleBotTurn(), 1000);
@@ -88,77 +90,99 @@ export function Market() {
   };
 
   const rarityColors = {
-    common: 'bg-gray-100 text-gray-700',
-    rare: 'bg-blue-100 text-blue-700',
-    legendary: 'bg-orange-100 text-orange-700'
+    common: 'bg-gray-100 text-gray-700 border-2 border-gray-300',
+    rare: 'bg-blue-50 text-blue-800 border-2 border-blue-300 shadow-blue-100 shadow-md',
+    legendary: 'bg-orange-50 text-orange-800 border-2 border-orange-300 shadow-orange-100 shadow-lg'
+  };
+
+  const rarityIcons = {
+    common: <BookOpen className="w-4 h-4 text-gray-500" />,
+    rare: <Star className="w-4 h-4 text-blue-500" />,
+    legendary: <Sparkles className="w-4 h-4 text-orange-500" />
+  };
+
+  const itemIcons = {
+    weapon: <Sword className="w-6 h-6 text-purple-600" />,
+    armor: <Shirt className="w-6 h-6 text-purple-600" />,
+    shield: <Shield className="w-6 h-6 text-purple-600" />,
+    helmet: <Crown className="w-6 h-6 text-purple-600" />,
   };
 
   return (
     <div 
-      className="fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto py-8" 
+      className="fixed inset-0 z-[100] bg-gradient-to-br from-purple-900/70 to-indigo-900/70 flex items-center justify-center overflow-y-auto py-8" 
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-xl p-4 lg:p-6 max-w-4xl w-[95%] mx-auto my-auto overflow-y-auto max-h-[90vh]"
+        className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 lg:p-8 max-w-5xl w-[95%] mx-auto my-auto overflow-y-auto max-h-[90vh] border-4 border-purple-600/30 shadow-2xl"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 lg:mb-6">
-          <div className="flex items-center gap-3">
-            <ShoppingBag className="w-5 h-5 lg:w-6 lg:h-6" />
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 lg:mb-8">
+          <div className="flex items-center gap-4">
+            <Wand2 className="w-8 h-8 text-purple-600" />
             <div>
-              <h2 className="text-lg lg:text-2xl font-bold">{currentPlayer.name}</h2>
-              <div className="flex items-center gap-1 lg:gap-2 text-sm lg:text-lg text-yellow-600">
-                <Coins className="w-4 h-4 lg:w-5 lg:h-5" />
-                <span>{currentPlayer.coins} altın</span>
+              <h2 className="text-2xl lg:text-3xl font-bold text-purple-900">Gizemli Sihir Dükkanı</h2>
+              <div className="flex items-center gap-2 text-lg lg:text-xl text-yellow-600">
+                <Coins className="w-5 h-5" />
+                <span>{currentPlayer.name}'ın Altını: {currentPlayer.coins} 💰</span>
               </div>
             </div>
           </div>
           <button
             onClick={refreshItems}
             disabled={currentPlayer.coins < 100 || hasRefreshed || hasPurchased}
-            className="flex items-center gap-1 lg:gap-2 px-2 py-1 lg:px-4 lg:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-xs lg:text-base"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-all"
           >
-            <RefreshCw className="w-3 h-3 lg:w-4 lg:h-4" />
-            {hasRefreshed ? 'Yenilenmiş' : 'Yenile (100 altın)'}
+            <RefreshCw className="w-4 h-4" />
+            {hasRefreshed ? 'Yenilenmiş' : 'Sihirli Envanter (100 altın)'}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Current Inventory */}
-          <div>
-            <h3 className="text-base lg:text-lg font-semibold mb-2 lg:mb-4">Mevcut Envanter</h3>
-            <div className="grid grid-cols-2 gap-2 lg:gap-3">
+          <div className="bg-white/70 rounded-xl p-4 lg:p-6 border-2 border-purple-200 shadow-lg">
+            <h3 className="text-xl lg:text-2xl font-semibold mb-4 text-purple-900 flex items-center gap-2">
+              <Scroll className="w-6 h-6 text-purple-600" />
+              Mevcut Envanter
+            </h3>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               {['helmet', 'weapon', 'armor', 'shield'].map(slot => {
                 const item = currentPlayer.inventory[slot];
                 return (
                   <div
                     key={slot}
                     className={cn(
-                      'p-2 lg:p-3 rounded-lg text-xs lg:text-sm',
-                      item ? rarityColors[item.rarity] : 'bg-gray-50 border-2 border-dashed'
+                      'p-3 rounded-lg text-sm transition-all',
+                      item ? rarityColors[item.rarity] : 'bg-gray-100 border-2 border-dashed border-gray-300'
                     )}
                   >
-                    <div className="font-medium mb-1">
-                      {item ? item.name : `Boş ${slot}`}
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="font-medium flex items-center gap-2">
+                        {item ? rarityIcons[item.rarity] : null}
+                        {item ? item.name : `Boş ${slot}`}
+                      </div>
+                      {item && <Gem className="w-4 h-4 text-purple-500" />}
                     </div>
                     {item && (
                       <>
-                        <div className="text-[10px] lg:text-xs text-gray-600 mb-1 lg:mb-2">{item.type}</div>
-                        <div className="text-[10px] lg:text-xs space-y-1">
+                        <div className="text-xs text-gray-600 mb-2">{item.type}</div>
+                        <div className="text-xs space-y-1">
                           {item.effects.map((effect, i) => (
-                            <div key={i} className="text-gray-600">
+                            <div key={i} className="text-gray-700 flex items-center gap-1">
+                              <Sword className="w-3 h-3 text-red-500" />
                               {effect.rentReduction && `Kira -%${effect.rentReduction * 100}`}
                               {effect.goldMultiplier && `Altın +%${effect.goldMultiplier * 100}`}
                               {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
                             </div>
                           ))}
                           {(item.rarity === 'legendary' || item.rarity === 'rare') && (
-                            <div className="text-gray-600 flex items-center gap-1">
-                              <Sword className="w-3 h-3 text-red-500" />
+                            <div className="text-gray-700 flex items-center gap-1">
+                              <Star className="w-3 h-3 text-yellow-500" />
                               {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
                             </div>
                           )}
-                          <div className="mt-1 text-[10px] lg:text-xs font-medium">
+                          <div className="mt-1 text-xs font-medium flex items-center gap-1">
+                            <Coins className="w-3 h-3 text-yellow-600" />
                             Değeri: {item.value} 💰
                           </div>
                         </div>
@@ -171,53 +195,68 @@ export function Market() {
           </div>
 
           {/* Available Items */}
-          <div>
-            <h3 className="text-base lg:text-lg font-semibold mb-2 lg:mb-4">Satın Alınabilir Itemler</h3>
-            <div className="grid grid-cols-2 gap-2 lg:gap-3">
+          <div className="bg-white/70 rounded-xl p-4 lg:p-6 border-2 border-purple-200 shadow-lg">
+            <h3 className="text-xl lg:text-2xl font-semibold mb-4 text-purple-900 flex items-center gap-2">
+              <Wand2 className="w-6 h-6 text-purple-600" />
+              Sihirli Eşyalar
+            </h3>
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
               {items.map((item, index) => (
-                <div
+                <motion.div
                   key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                   className={cn(
-                    'p-2 lg:p-3 rounded-lg text-xs lg:text-sm',
-                    rarityColors[item.rarity]
+                    'p-3 rounded-lg text-sm cursor-pointer hover:scale-105 transition-all',
+                    rarityColors[item.rarity],
+                    currentPlayer.coins >= item.value && !hasPurchased ? 'hover:shadow-xl' : 'opacity-50 cursor-not-allowed'
                   )}
+                  onClick={() => handlePurchase(item)}
                 >
-                  <div className="font-medium mb-1">{item.name}</div>
-                  <div className="text-[10px] lg:text-xs text-gray-600 mb-1 lg:mb-2">{item.type}</div>
-                  <div className="text-[10px] lg:text-xs space-y-1 mb-2 lg:mb-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="font-medium flex items-center gap-2">
+                      {rarityIcons[item.rarity]}
+                      {itemIcons[item.type]}
+                      {item.name}
+                    </div>
+                    <Gem className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div className="text-xs text-gray-600 mb-2">{item.type}</div>
+                  <div className="text-xs space-y-1">
                     {item.effects.map((effect, i) => (
-                      <div key={i} className="text-gray-600">
+                      <div key={i} className="text-gray-700 flex items-center gap-1">
+                        <Sword className="w-3 h-3 text-red-500" />
                         {effect.rentReduction && `Kira -%${effect.rentReduction * 100}`}
                         {effect.goldMultiplier && `Altın +%${effect.goldMultiplier * 100}`}
                         {effect.expBonus && `Tecrübe +%${effect.expBonus * 100}`}
                       </div>
                     ))}
                     {(item.rarity === 'legendary' || item.rarity === 'rare') && (
-                      <div className="text-gray-600 flex items-center gap-1">
-                        <Sword className="w-3 h-3 text-red-500" />
+                      <div className="text-gray-700 flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-500" />
                         {item.rarity === 'legendary' ? '+2 STR' : '+1 STR'}
                       </div>
                     )}
+                    <div className="mt-1 text-xs font-medium flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-yellow-600" />
+                      Fiyat: {item.value} 💰
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handlePurchase(item)}
-                    disabled={currentPlayer.coins < item.value || hasPurchased}
-                    className="w-full bg-blue-600 text-white py-1 lg:py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-[10px] lg:text-xs"
-                  >
-                    {hasPurchased ? 'Zaten Satın Aldın' : `Satın Al (${item.value} 💰)`}
-                  </button>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         </div>
 
-        <button
-          onClick={handleClose}
-          className="w-full mt-4 lg:mt-6 bg-gray-200 py-2 lg:py-3 rounded-lg hover:bg-gray-300 transition-colors text-sm lg:text-base"
-        >
-          Kapat
-        </button>
+        <div className="mt-6 text-center">
+          <button 
+            onClick={handleClose}
+            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
+          >
+            Dükkanı Kapat
+          </button>
+        </div>
       </motion.div>
     </div>
   );

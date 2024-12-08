@@ -41,12 +41,16 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
   
   // Oyuncunun altını 0 veya negatifse hemen iflas et
   if (player.coins < 0) {
+    const totalCoins = player.coins; // Toplam parayı kaydet
     player.coins = 0; // Altını 0'a sabitle
     
     // Transfer remaining coins to creditor if exists
     if (creditor) {
-      creditor.coins += player.coins;
-      creditor.rentCollected += player.coins;
+      creditor.coins += Math.abs(totalCoins); // Mutlak değerini aktar
+      creditor.rentCollected += Math.abs(totalCoins);
+      
+      // Detaylı log mesajı ekle
+      get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, ${Math.abs(totalCoins)} altın borcu ödeyemedi ve ${creditor.name}'e aktardı!</span>`);
     }
 
     // Release all properties
@@ -65,13 +69,10 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
       });
     }
 
-    // Add to game log
-    get().addToLog(`<span class="text-red-500">${player.name} iflas etti! ${owedAmount} altın borcu ödeyemedi.</span>`);
-    if (creditor) {
-      get().addToLog(`<span class="text-yellow-500">${creditor.name}, ${player.coins} altın aldı.</span>`);
-    }
+    // Daha detaylı log mesajları
+    get().addToLog(`<span class="text-yellow-500">🏴 ${player.name} tüm varlıklarını kaybetti!</span>`);
     if (player.properties.length > 0) {
-      get().addToLog(`<span class="text-blue-500">${player.name}'nin tüm mülkleri satışa çıktı!</span>`);
+      get().addToLog(`<span class="text-blue-500">🏘️ ${player.name}'nin tüm mülkleri satışa çıktı!</span>`);
     }
 
     // Remove player from game
@@ -80,7 +81,7 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
 
     // Show notification
     get().showNotification({
-      title: 'İflas!',
+      title: 'İFLAS!',
       message: `${player.name} iflas etti ve oyundan elendi!`,
       type: 'error'
     });
@@ -102,7 +103,7 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
         message: `${players[0].name} oyunu kazandı!`,
         type: 'success'
       });
-      get().addToLog(`<span class="text-green-500">${players[0].name} oyunu kazandı!</span>`);
+      get().addToLog(`<span class="text-green-500">🏆 ${players[0].name} oyunu kazandı!</span>`);
       set({ winner: players[0] });
     } else {
       // If next player is bot, trigger bot turn after a delay

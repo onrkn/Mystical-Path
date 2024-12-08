@@ -38,6 +38,7 @@ const initialState: GameState = {
   showCombatAnimation: null,
   selectedProperty: null,
   activeBoss: null,
+  squares: [], // squares'ı initial state'e ekledim
   settings: {
     ...defaultSettings,
     musicEnabled: true,     // Varsayılan olarak müzik açık
@@ -176,7 +177,7 @@ const handleSquareEffect = (playerId: string, set: (state: any) => void, get: ()
   const currentPlayer = state.players.find(p => p.id === playerId);
   if (!currentPlayer) return;
 
-  const square = squares[currentPlayer.position];
+  const square = state.squares[currentPlayer.position];
   
   switch (square.type) {
     case 'arsa':
@@ -299,7 +300,7 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
   // Mevcut oyun durumunu al
   const state = get();
   const players = [...state.players];
-  const updatedSquares = squares.map(square => {
+  const updatedSquares = state.squares.map(square => {
     // Kopyalama yaparak orijinal veriyi değiştirmiyoruz
     const updatedSquare = { ...square };
     
@@ -351,7 +352,7 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
   }));
 
   // Global squares nesnesini de güncelle
-  squares.splice(0, squares.length, ...updatedSquares);
+  state.squares.splice(0, state.squares.length, ...updatedSquares);
 };
 
 const loadSavedSettings = () => {
@@ -377,7 +378,7 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
   const { settings } = get();
   
   // Reset properties to their base state with current settings
-  squares.forEach(square => {
+  get().squares.forEach(square => {
     if (square.property) {
       square.property.price = Math.floor(square.property.baseRent * 5 * settings.propertyPriceMultiplier);
       square.property.rent = Math.floor(square.property.baseRent * settings.propertyRentMultiplier);
@@ -645,6 +646,12 @@ const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState
 const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () => GameState) => {
   const state = get();
   const { players, squares } = state;
+  
+  console.log('Bankruptcy Debug:', { 
+    playerId, 
+    players: players.length, 
+    squares: squares ? (Array.isArray(squares) ? squares.length : 'NOT AN ARRAY') : 'UNDEFINED' 
+  });
 
   // İflas eden oyuncuyu bul
   const bankruptPlayer = players.find(p => p.id === playerId);
@@ -657,6 +664,8 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   const transferAmount = bankruptPlayer.coins;
   if (owner) {
     owner.coins += transferAmount;
+    owner.rentCollected += transferAmount;
+    
     get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
   }
 
@@ -682,12 +691,21 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Eğer son kalan oyuncu ise oyunu bitir
   if (updatedPlayers.length === 1) {
     const winner = updatedPlayers[0];
-    set({
+    set({ 
       players: updatedPlayers,
       winner,
       gameMessage: `${winner.name} oyunu kazandı!`,
       gameStarted: false
     });
+    
+    // Kazanan için bildirim ve log
+    get().showNotification({
+      title: 'Oyun Bitti!',
+      message: `${winner.name} oyunu kazandı!`,
+      type: 'success'
+    });
+    get().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
+    
     return;
   }
 
@@ -700,7 +718,7 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Oyun durumunu güncelle
   set({
     players: updatedPlayers,
-    squares: [...squares],
+    squares: [...squares], // Squares'ı güncel tut
     currentPlayerIndex: newCurrentPlayerIndex,
     gameMessage: `${bankruptPlayer.name} oyundan elendi!`,
     showRentDialog: false,
@@ -708,6 +726,14 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
     waitingForDecision: false,
     isRolling: false
   });
+
+  // İflas eden oyuncu için bildirim ve log
+  get().showNotification({
+    title: 'İFLAS!',
+    message: `${bankruptPlayer.name} oyundan elendi!`,
+    type: 'error'
+  });
+  get().addToLog(`<span class="text-red-500">🏴 ${bankruptPlayer.name} oyundan elendi!</span>`);
 
   // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
@@ -717,35 +743,64 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
 };
 
 const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const { players } = state;
+
+  console.log('PayRent Debug:', { 
+    player: player.name, 
+    owner: owner.name, 
+    rentAmount, 
+    playerCoins: player.coins 
+  });
+
   // Oyuncunun kirayı ödeyecek yeterli parası yoksa
   if (player.coins < rentAmount) {
+    // Oyuncunun toplam parasını aktar
+    const transferAmount = player.coins;
+    
+    // Parayı mülk sahibine aktar
+    owner.coins += transferAmount;
+    owner.rentCollected += transferAmount;
+    
+    // Log mesajları ekle
+    get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, kirayı ödeyemedi!</span>`);
+    get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${player.name}'den ${transferAmount} altın aldı!</span>`);
+    
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(player.id, set, get);
+    get().handleBankruptcy(player.id);
+    
+    // Bildirim göster
+    get().showNotification({
+      title: 'İFLAS!',
+      message: `${player.name} kirayı ödeyemedi ve oyundan elendi!`,
+      type: 'error'
+    });
+    
     return;
   }
 
-  // Kirayı öde
+  // Player can afford rent
   player.coins -= rentAmount;
-  owner.coins += rentAmount;
   player.rentPaid += rentAmount;
+  owner.coins += rentAmount;
+  owner.rentCollected += rentAmount;
+  
+  get().showNotification({
+    title: 'Kira Ödendi',
+    message: `${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!`,
+    type: 'info'
+  });
+  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
 
-  // Log ve bildirim
-  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'a ${rentAmount} altın kira ödedi.</span>`);
-
-  // İflas kontrolü
-  get().checkPlayerBankruptcy(player);
-
-  // Oyun durumunu güncelle
   set({
-    players: [...get().players],
-    showRentDialog: false,
+    players: [...players],
     rentInfo: null,
     waitingForDecision: false,
-    currentPlayerIndex: (get().currentPlayerIndex + 1) % get().players.length
+    currentPlayerIndex: (state.currentPlayerIndex + 1) % players.length
   });
 
-  // Sonraki oyuncu bot ise bot turunu başlat
-  const nextPlayer = get().players[(get().currentPlayerIndex + 1) % get().players.length];
+  // If next player is bot, trigger bot turn
+  const nextPlayer = players[(state.currentPlayerIndex + 1) % players.length];
   if (nextPlayer.isBot) {
     setTimeout(() => get().handleBotTurn(), 1000);
   }

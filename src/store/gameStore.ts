@@ -472,10 +472,18 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
   // Oyuncunun kira ödeyecek yeterli altını yoksa
   if (currentPlayer.coins < rentAmount) {
+    console.log('💸 Insufficient Funds:', {
+      playerName: currentPlayer.name,
+      currentCoins: currentPlayer.coins,
+      rentAmount: rentAmount,
+      ownerName: owner.name
+    });
+
     // Oyuncunun tüm parasını mülk sahibine aktar
     const transferAmount = currentPlayer.coins;
     owner.coins += transferAmount;
-    
+    currentPlayer.coins = 0;  // Parayı sıfırla
+
     // Log ve bildirim
     get().addToLog(`<span class="text-red-600">${currentPlayer.name}, ${rentAmount} altın kirayı tam ödeyemedi! Kalan ${transferAmount} altını ${owner.name}'e aktardı.</span>`);
     
@@ -485,8 +493,8 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
       type: 'error'
     });
 
-    // İflas mekanizmasını çağır
-    get().handleBankruptcy(currentPlayer.id);
+    // İflas kontrolü
+    get().checkPlayerBankruptcy(currentPlayer, set, get);
     
     // Sonraki oyuncuya geç
     const nextIndex = (get().currentPlayerIndex + 1) % players.length;
@@ -643,30 +651,44 @@ const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState
   }
 };
 
-const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () => GameState) => {
-  const state = get();
+const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, set?: (state: any) => void, get?: () => GameState) => {
+  const gameGet = get || useGameStore.getState;
+  const gameSet = set || useGameStore.setState;
+  const state = gameGet();
   const { players, squares } = state;
   
-  console.log('Bankruptcy Debug:', { 
+  console.log('🚨 Bankruptcy Handler:', { 
     playerId, 
     players: players.length, 
-    squares: squares ? (Array.isArray(squares) ? squares.length : 'NOT AN ARRAY') : 'UNDEFINED' 
+    squares: squares ? (Array.isArray(squares) ? squares.length : 'NOT AN ARRAY') : 'UNDEFINED',
+    currentPlayerIndex: state.currentPlayerIndex
   });
 
   // İflas eden oyuncuyu bul
   const bankruptPlayer = players.find(p => p.id === playerId);
-  if (!bankruptPlayer) return;
+  if (!bankruptPlayer) {
+    console.error('❌ Bankruptcy: Player not found!', { playerId, players });
+    return;
+  }
+
+  console.log('🏴 Bankruptcy Details:', {
+    playerName: bankruptPlayer.name,
+    coins: bankruptPlayer.coins,
+    properties: bankruptPlayer.properties.length,
+    rentAmount,
+    owner
+  });
 
   // Mülk sahibini bul (son kirayı ödemek zorunda kaldığı oyuncu)
-  const owner = state.rentInfo?.owner;
+  const rentOwner = owner || state.rentInfo?.owner;
 
   // Oyuncunun tüm parasını mülk sahibine aktar
-  const transferAmount = bankruptPlayer.coins;
-  if (owner) {
-    owner.coins += transferAmount;
-    owner.rentCollected += transferAmount;
+  const transferAmount = Math.min(bankruptPlayer.coins, rentAmount || 0);
+  if (rentOwner) {
+    rentOwner.coins += transferAmount;
+    rentOwner.rentCollected += transferAmount;
     
-    get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
+    gameGet().addToLog(`<span class="text-green-500">💰 ${rentOwner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
   }
 
   // Oyuncunun tüm mülklerini serbest bırak ve sahibini sıfırla
@@ -688,10 +710,15 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
   const updatedPlayers = players.filter(p => p.id !== playerId);
 
+  console.log('🏁 Post Bankruptcy:', {
+    remainingPlayers: updatedPlayers.length,
+    currentPlayerIndex: state.currentPlayerIndex
+  });
+
   // Eğer son kalan oyuncu ise oyunu bitir
   if (updatedPlayers.length === 1) {
     const winner = updatedPlayers[0];
-    set({ 
+    gameSet({ 
       players: updatedPlayers,
       winner,
       gameMessage: `${winner.name} oyunu kazandı!`,
@@ -699,12 +726,12 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
     });
     
     // Kazanan için bildirim ve log
-    get().showNotification({
+    gameGet().showNotification({
       title: 'Oyun Bitti!',
       message: `${winner.name} oyunu kazandı!`,
       type: 'success'
     });
-    get().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
+    gameGet().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
     
     return;
   }
@@ -716,7 +743,7 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   }
 
   // Oyun durumunu güncelle
-  set({
+  gameSet({
     players: updatedPlayers,
     squares: [...squares], // Squares'ı güncel tut
     currentPlayerIndex: newCurrentPlayerIndex,
@@ -728,17 +755,17 @@ const handleBankruptcy = (playerId: string, set: (state: any) => void, get: () =
   });
 
   // İflas eden oyuncu için bildirim ve log
-  get().showNotification({
+  gameGet().showNotification({
     title: 'İFLAS!',
     message: `${bankruptPlayer.name} oyundan elendi!`,
     type: 'error'
   });
-  get().addToLog(`<span class="text-red-500">🏴 ${bankruptPlayer.name} oyundan elendi!</span>`);
+  gameGet().addToLog(`<span class="text-red-500">🏴 ${bankruptPlayer.name} oyundan elendi!</span>`);
 
   // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
   if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-    setTimeout(() => get().handleBotTurn(), 1500);
+    setTimeout(() => gameGet().handleBotTurn(), 1500);
   }
 };
 
@@ -767,7 +794,7 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
     get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${player.name}'den ${transferAmount} altın aldı!</span>`);
     
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(player.id);
+    get().handleBankruptcy(player.id, set, get);
     
     // Bildirim göster
     get().showNotification({
@@ -816,19 +843,30 @@ const toggleMarketMusic = (show: boolean) => {
   }
 };
 
-const checkPlayerBankruptcy = (player: any, set: (state: any) => void, get: () => GameState) => {
+const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: () => GameState) => {
+  console.log('🚨 Bankruptcy Check:', { 
+    playerName: player.name, 
+    coins: player.coins,
+    isBankrupt: player.isBankrupt 
+  });
+
   // Oyuncunun parası 0 veya 0'ın altındaysa iflas et
-  if (player.coins <= 0) {
-    get().addToLog(`<span class="text-red-600">💥 ${player.name} iflas etti! Parası ${player.coins} altına düştü.</span>`);
+  if (player.coins <= 0 && !player.isBankrupt) {
+    const gameGet = get || useGameStore.getState;
+    const gameSet = set || useGameStore.setState;
+
+    console.log('🏴 Triggering Bankruptcy for:', player.name);
+
+    gameGet().addToLog(`<span class="text-red-600">💥 ${player.name} iflas etti! Parası ${player.coins} altına düştü.</span>`);
     
-    get().showNotification({
+    gameGet().showNotification({
       title: 'İFLAS!',
       message: `${player.name} iflas etti. Parası ${player.coins} altına düştü.`,
       type: 'error'
     });
 
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(player.id, set, get);
+    gameGet().handleBankruptcy(player.id, gameSet, gameGet);
   }
 };
 
@@ -873,7 +911,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   startWeatherSystem: () => startWeatherSystem(set, get),
   stopWeatherSystem: () => stopWeatherSystem(),
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
-  handleBankruptcy: (playerId: string) => handleBankruptcy(playerId, set, get),
+  handleBankruptcy: (playerId: string, rentAmount?: number, owner?: any) => handleBankruptcy(playerId, rentAmount, owner, set, get),
   payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
   toggleMarketMusic: (show: boolean) => toggleMarketMusic(show),
   checkPlayerBankruptcy: (player: any) => checkPlayerBankruptcy(player, set, get)

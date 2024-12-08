@@ -28,7 +28,7 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
     // Kirayı ödeyecek yeterli parası yoksa
     if (player.coins < rentAmount) {
       // İflas mekanizmasını çağır ve dialog'u kapat
-      useGameStore.getState().handleBankruptcy(player, rentAmount, owner);
+      useGameStore.getState().handleBankruptcy(player.id, rentAmount, owner);
       
       // Dialog'u kapatmak için state'i güncelle
       useGameStore.setState({

@@ -9,7 +9,9 @@ import {
   Star,
   ArrowUpRight,
   Gem,
-  Zap
+  Zap,
+  Shirt,  
+  Layers  
 } from 'lucide-react';
 import type { Item } from '../types/game';
 import { useGameStore } from '../store/gameStore';
@@ -17,7 +19,7 @@ import { useGameStore } from '../store/gameStore';
 const itemIcons = {
   helmet: Crown,
   weapon: Sword,
-  armor: Shield,
+  armor: Shirt,
   shield: Shield
 };
 

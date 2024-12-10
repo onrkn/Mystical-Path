@@ -6,6 +6,15 @@ import { DiceRoller } from './DiceRoller';
 import { Inventory } from './Inventory';
 import { squares, king, BOARD_SIZE } from '../data/board';
 import { useGameStore } from '../store/gameStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Gamepad2, 
+  Dice5, 
+  ScrollText, 
+  Layers, 
+  Crown, 
+  Sparkles 
+} from 'lucide-react';
 
 // Kral animasyonu için CSS keyframes
 const kingAnimationStyle = `
@@ -100,30 +109,88 @@ export function GameBoard() {
   return (
     <>
       <style>{kingAnimationStyle}</style>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+      >
         <div className="space-y-6">
-          <PlayerStats />
-          <Inventory />
-          <GameLog />
+          <motion.div 
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <PlayerStats />
+          </motion.div>
+          
+          <motion.div 
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Inventory />
+          </motion.div>
+          
+          <motion.div 
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <GameLog />
+          </motion.div>
         </div>
         
         <div className="lg:col-span-2 relative">
           <DiceRoller />
           
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-bold mb-4">Oyun Tahtası</h3>
-            <div className="grid grid-cols-8 gap-2 relative">
-              {squares.map((square, index) => (
-                <BoardSquare
-                  key={square.id}
-                  square={square}
-                  players={players.filter(p => p.position === index)}
-                />
-              ))}
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500"></div>
+            
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <Gamepad2 className="w-8 h-8 text-purple-500" />
+                <h3 className="text-2xl font-bold text-gray-800">Oyun Tahtası</h3>
+              </div>
+              
+              {settings.kingEnabled && (
+                <motion.div 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center space-x-2 text-gray-600"
+                >
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  <span className="font-medium">Kral Aktif</span>
+                </motion.div>
+              )}
             </div>
-          </div>
+            
+            <div className="grid grid-cols-8 gap-2 relative">
+              <AnimatePresence>
+                {squares.map((square, index) => (
+                  <motion.div
+                    key={square.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3, delay: index * 0.02 }}
+                  >
+                    <BoardSquare
+                      square={square}
+                      players={players.filter(p => p.position === index)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

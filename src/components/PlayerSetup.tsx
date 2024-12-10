@@ -138,17 +138,6 @@ export function PlayerSetup() {
                   className="flex-1 p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
                   required
                 />
-                
-                {playerTypes[index] === 'bot' && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-sm text-gray-500 flex items-center space-x-1"
-                  >
-                    <Crown className="w-4 h-4 text-yellow-500" />
-                    <span>Bot</span>
-                  </motion.div>
-                )}
               </motion.div>
             ))}
           </div>

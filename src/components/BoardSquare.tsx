@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { getPropertyIcon } from '../components/PropertyIcons';
 import { ShoppingBag, Sparkles, AlertTriangle, Gift, Circle, Home, Skull, Trees } from 'lucide-react';
 import type { Square, Player } from '../types/game';
 import { useGameStore } from '../store/gameStore';
@@ -84,6 +85,13 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
     })
   };
 
+  const renderSquareIcon = () => {
+    if (square.type === 'arsa' && square.icon) {
+      return square.icon;
+    }
+    return <Icon className="w-6 h-6 mb-1" />;
+  };
+
   return (
     <div 
       className={cn(
@@ -94,7 +102,7 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
       )}
       style={squareStyle}
     >
-      <Icon className="w-6 h-6 mb-1" />
+      {renderSquareIcon()}
       <div className="text-xs text-center font-medium">{square.name}</div>
       
       {/* Property Level and Rent */}

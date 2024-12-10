@@ -13,11 +13,11 @@ import {
   Scroll,
   Shield,
   Shirt,
-  Crown,
-  Helmet
+  Crown
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
+import { getPropertyIcon } from './PropertyIcons';
 import { cn } from '../utils/cn';
 import { playMagicShopPurchaseSound, MARKET_MUSIC, stopBackgroundMusic, playBackgroundMusic } from '../utils/soundUtils';
 
@@ -106,6 +106,10 @@ export function Market() {
     armor: <Shirt className="w-6 h-6 text-purple-600" />,
     shield: <Shield className="w-6 h-6 text-purple-600" />,
     helmet: <Crown className="w-6 h-6 text-purple-600" />,
+  };
+
+  const renderPropertyIcon = (propertyName: string) => {
+    return getPropertyIcon(propertyName);
   };
 
   return (

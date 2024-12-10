@@ -113,4 +113,15 @@ export interface GameSettings {
   kingEnabled: boolean;
 }
 
+export type Square = {
+  id: number;
+  type: SquareType;
+  name: string;
+  description: string;
+  property?: Property;
+  effect?: { coins?: number; xp?: number };
+  boss?: Boss;
+  icon?: React.ReactNode;
+};
+
 // Rest of the types remain the same...

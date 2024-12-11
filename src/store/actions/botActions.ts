@@ -56,7 +56,7 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Roll dice if not in jail
-      if (!currentPlayer.inJail) {
+      if (!currentPlayer.inJail && !currentPlayer.isBankrupt && currentPlayer.position !== -1) {
         const roll1 = Math.floor(Math.random() * 6) + 1;
         const roll2 = Math.floor(Math.random() * 6) + 1;
         const totalRoll = roll1 + roll2;
@@ -74,14 +74,16 @@ export const handleBotActions = (set: SetState<GameState>, get: GetState<GameSta
         // Move player with animation
         await get().movePlayer(currentPlayer.id, totalRoll);
       } else {
-        // Skip turn if in jail
-        currentPlayer.jailTurnsLeft--;
-        if (currentPlayer.jailTurnsLeft <= 0) {
-          currentPlayer.inJail = false;
-          currentPlayer.jailTurnsLeft = 0;
-          get().addToLog(`<span class="text-gray-500">${currentPlayer.name} hapishaneden çıktı!</span>`);
-        } else {
-          get().addToLog(`<span class="text-gray-500">${currentPlayer.name} hapishanede. Kalan tur: ${currentPlayer.jailTurnsLeft}</span>`);
+        // Skip turn if in jail or bankrupt
+        if (currentPlayer.inJail) {
+          currentPlayer.jailTurnsLeft--;
+          if (currentPlayer.jailTurnsLeft <= 0) {
+            currentPlayer.inJail = false;
+            currentPlayer.jailTurnsLeft = 0;
+            get().addToLog(`<span class="text-gray-500">${currentPlayer.name} hapishaneden çıktı!</span>`);
+          } else {
+            get().addToLog(`<span class="text-gray-500">${currentPlayer.name} hapishanede. Kalan tur: ${currentPlayer.jailTurnsLeft}</span>`);
+          }
         }
 
         // Advance turn

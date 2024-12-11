@@ -457,84 +457,48 @@ const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
 import { squares } from '../data/board';
 
 const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) => void, get: () => GameState) => {
-  const { players } = get();
-  const owner = players.find(p => p.id === square.property?.ownerId);
+  const state = get();
+  const { players, currentPlayerIndex } = state;
+
+  // Mülk sahibini bul
+  const propertyOwner = players.find(p => p.id === square.property.ownerId);
   
-  if (!owner || !square.property) return;
+  if (!propertyOwner || propertyOwner.id === currentPlayer.id) return;
 
   // Kira miktarını hesapla
-  let rentAmount = square.property.rent;
-  
-  // Kral özelliği açıksa ve kral bu mülkteyse kira 10 katına çıkar
-  if (get().settings.kingEnabled && get().kingPosition === square.id) {
-    rentAmount *= 10;
-  }
+  const rentAmount = calculateRent(square.property, get);
 
-  // Oyuncunun kira ödeyecek yeterli altını yoksa
-  if (currentPlayer.coins < rentAmount) {
-    console.log('💸 Insufficient Funds:', {
-      playerName: currentPlayer.name,
-      currentCoins: currentPlayer.coins,
-      rentAmount: rentAmount,
-      ownerName: owner.name
-    });
-
-    // Oyuncunun tüm parasını mülk sahibine aktar
-    const transferAmount = currentPlayer.coins;
-    owner.coins += transferAmount;
-    currentPlayer.coins = 0;  // Parayı sıfırla
-
-    // Log ve bildirim
-    get().addToLog(`<span class="text-red-600">${currentPlayer.name}, ${rentAmount} altın kirayı tam ödeyemedi! Kalan ${transferAmount} altını ${owner.name}'e aktardı.</span>`);
-    
-    get().showNotification({
-      title: 'İFLAS!',
-      message: `${currentPlayer.name}, ${rentAmount} altın kirayı ödeyemedi ve oyundan çıktı.`,
-      type: 'error'
-    });
-
-    // İflas kontrolü
-    get().checkPlayerBankruptcy(currentPlayer, set, get);
-    
-    // Sonraki oyuncuya geç
-    const nextIndex = (get().currentPlayerIndex + 1) % players.length;
-    set({ 
-      currentPlayerIndex: nextIndex,
-      showRentDialog: false,
-      rentInfo: null,
-      waitingForDecision: false,
-      isRolling: false
-    });
-
-    // Sonraki oyuncu bot ise bot turunu başlat
-    const nextPlayer = players[nextIndex];
-    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-      setTimeout(() => get().handleBotTurn(), 1000);
-    }
-    return;
-  }
-
-  // Normal kira ödeme işlemi
-  currentPlayer.coins -= rentAmount;
-  owner.coins += rentAmount;
-  owner.rentCollected += rentAmount;
-
-  // Log ve bildirim
-  get().addToLog(`<span class="text-blue-500">${currentPlayer.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
-
-  // Oyun durumunu güncelle
-  set({
-    players: [...players],
-    showRentDialog: false,
-    rentInfo: null,
-    waitingForDecision: false,
-    currentPlayerIndex: (get().currentPlayerIndex + 1) % players.length
+  console.log('Property Rent Debug:', { 
+    currentPlayer: currentPlayer.name, 
+    owner: propertyOwner.name, 
+    rentAmount 
   });
 
-  // Sonraki oyuncu bot ise bot turunu başlat
-  const nextPlayer = players[(get().currentPlayerIndex + 1) % players.length];
+  // Kira bilgisini kaydet
+  set({ 
+    rentInfo: { 
+      player: currentPlayer, 
+      owner: propertyOwner, 
+      amount: rentAmount 
+    },
+    showRentDialog: true 
+  });
+
+  // Kirayı öde
+  payRent(currentPlayer, propertyOwner, rentAmount, set, get);
+
+  // Sırayı ilerlet
+  set({
+    currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+    showRentDialog: false,
+    rentInfo: null,
+    waitingForDecision: false
+  });
+
+  // Sonraki oyuncu bir bot ise bot turunu başlat
+  const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
   if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-    setTimeout(() => get().handleBotTurn(), 1000);
+    setTimeout(() => get().handleBotTurn(), 1500);
   }
 };
 
@@ -790,11 +754,22 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
     owner.rentCollected += transferAmount;
     
     // Log mesajları ekle
-    get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, kirayı ödeyemedi!</span>`);
+    get().addToLog(`<span class="text-red-500">💸 Insufficient Funds: ${player.name}, kirayı ödeyemedi!</span>`);
     get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${player.name}'den ${transferAmount} altın aldı!</span>`);
     
+    // Oyuncunun mülklerini boşa düşür
+    player.properties.forEach(prop => {
+      // Mülkün sahibini sıfırla
+      const squareIndex = state.squares.findIndex(sq => sq.property?.id === prop.id);
+      if (squareIndex !== -1 && state.squares[squareIndex].property) {
+        state.squares[squareIndex].property.ownerId = null;
+        state.squares[squareIndex].property.level = 1;
+        state.squares[squareIndex].property.rent = state.squares[squareIndex].property.baseRent;
+      }
+    });
+    
     // İflas mekanizmasını çağır
-    get().handleBankruptcy(player.id, set, get);
+    get().handleBankruptcy(player.id, rentAmount, owner, set, get);
     
     // Bildirim göster
     get().showNotification({
@@ -802,34 +777,53 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
       message: `${player.name} kirayı ödeyemedi ve oyundan elendi!`,
       type: 'error'
     });
-    
-    return;
-  }
 
-  // Player can afford rent
-  player.coins -= rentAmount;
-  player.rentPaid += rentAmount;
-  owner.coins += rentAmount;
-  owner.rentCollected += rentAmount;
-  
-  get().showNotification({
-    title: 'Kira Ödendi',
-    message: `${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!`,
-    type: 'info'
-  });
-  get().addToLog(`<span class="text-blue-500">${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+    // Sonraki oyuncunun bot olup olmadığını kontrol et
+    const currentPlayerIndex = state.currentPlayerIndex;
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayer = players[nextPlayerIndex];
 
-  set({
-    players: [...players],
-    rentInfo: null,
-    waitingForDecision: false,
-    currentPlayerIndex: (state.currentPlayerIndex + 1) % players.length
-  });
+    // Oyun durumunu güncelle
+    set({
+      players: [...players],
+      currentPlayerIndex: nextPlayerIndex,
+      showRentDialog: false,
+      rentInfo: null,
+      waitingForDecision: false,
+      isRolling: false
+    });
 
-  // If next player is bot, trigger bot turn
-  const nextPlayer = players[(state.currentPlayerIndex + 1) % players.length];
-  if (nextPlayer.isBot) {
-    setTimeout(() => get().handleBotTurn(), 1000);
+    // Sonraki oyuncu bir bot ise bot turunu başlat
+    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
+      setTimeout(() => get().handleBotTurn(), 1500);
+    }
+  } else {
+    // Yeterli para varsa kirayı öde
+    player.coins -= rentAmount;
+    owner.coins += rentAmount;
+    owner.rentCollected += rentAmount;
+
+    // Log mesajları ekle
+    get().addToLog(`<span class="text-green-500">💰 ${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+
+    // Sonraki oyuncunun bot olup olmadığını kontrol et
+    const currentPlayerIndex = state.currentPlayerIndex;
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayer = players[nextPlayerIndex];
+
+    // Oyun durumunu güncelle
+    set({
+      players: [...players],
+      currentPlayerIndex: nextPlayerIndex,
+      showRentDialog: false,
+      rentInfo: null,
+      waitingForDecision: false
+    });
+
+    // Sonraki oyuncu bir bot ise bot turunu başlat
+    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
+      setTimeout(() => get().handleBotTurn(), 1500);
+    }
   }
 };
 

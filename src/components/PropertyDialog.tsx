@@ -17,9 +17,16 @@ import {
 import { getPropertyIcon } from './PropertyIcons';
 
 export function PropertyDialog({ property }: { property: Property }) {
-  const { players, currentPlayerIndex, purchaseProperty } = useGameStore();
+  const { players, currentPlayerIndex, purchaseProperty, settings } = useGameStore();
   const currentPlayer = players[currentPlayerIndex];
   const canAfford = currentPlayer.coins >= property.price;
+
+  const calculateRentWithMultiplier = () => {
+    // Varsayılan çarpan 1 olarak ayarlandı
+    const rentMultiplier = settings?.propertyRentMultiplier ?? 1;
+    let rent = property.rent * rentMultiplier;
+    return Math.floor(rent);
+  };
 
   const handlePurchase = (purchase: boolean) => {
     if (purchase && canAfford) {
@@ -113,7 +120,7 @@ export function PropertyDialog({ property }: { property: Property }) {
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <p className="text-2xl font-bold text-blue-800 flex items-center">
-                  {property.rent} 
+                  {calculateRentWithMultiplier()} 
                   <span className="text-sm text-blue-500 ml-1">💰</span>
                 </p>
                 <p className="text-xs text-blue-600 mt-1 opacity-70">Mevcut Kira</p>
@@ -123,7 +130,7 @@ export function PropertyDialog({ property }: { property: Property }) {
                 <div className="text-xs text-blue-600">
                   <span className="opacity-60">Lv.5:</span> 
                   <span className="font-semibold ml-1 text-blue-800">
-                    {Math.floor(property.rent * (1 + (4 * 0.2)))} 
+                    {Math.floor(calculateRentWithMultiplier() * (1 + (4 * 0.2)))} 
                     <span className="text-[10px] ml-0.5 opacity-70">💰</span>
                   </span>
                 </div>

@@ -10,8 +10,9 @@ export const calculateRent = (property: Property, get: GetState<GameState>) => {
   // Temel kira hesaplaması (seviye bonusu)
   let rent = property.baseRent * (1 + ((property.level - 1) * 0.2));
   
-  // Ayarlar çarpanı
-  rent = rent * settings.propertyRentMultiplier;
+  // Ayarlar çarpanı (varsayılan 1 olarak ayarlandı)
+  const rentMultiplier = settings?.propertyRentMultiplier ?? 1;
+  rent = rent * rentMultiplier;
   
   // Hava durumu etkisi
   if (weather === 'rain' && settings.weatherEnabled) {

@@ -39,27 +39,47 @@ export function generatePlayerColor(index: number): string {
 export function handleBankruptcy(player: Player, owedAmount: number, creditor: Player | null, get: any, set: any): void {
   const { players } = get();
   
+  // Güvenlik kontrolü: owedAmount ve player.coins'in sayı olup olmadığını kontrol et
+  if (isNaN(owedAmount) || owedAmount === undefined) {
+    console.error(`Geçersiz borç miktarı: ${owedAmount}`);
+    owedAmount = 0;
+  }
+
+  if (isNaN(player.coins) || player.coins === undefined) {
+    console.error(`Geçersiz oyuncu parası: ${player.coins}`);
+    player.coins = 0;
+  }
+  
   // Oyuncunun altını 0 veya negatifse hemen iflas et
-  if (player.coins < 0) {
-    const totalCoins = player.coins; // Toplam parayı kaydet
+  if (player.coins <= 0) {
+    const totalCoins = Math.abs(player.coins); // Mutlak değeri al
     player.coins = 0; // Altını 0'a sabitle
     
     // Transfer remaining coins to creditor if exists
     if (creditor) {
-      creditor.coins += Math.abs(totalCoins); // Mutlak değerini aktar
-      creditor.rentCollected += Math.abs(totalCoins);
+      creditor.coins += totalCoins;
+      creditor.rentCollected += totalCoins;
       
       // Detaylı log mesajı ekle
-      get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, ${Math.abs(totalCoins)} altın borcu ödeyemedi ve ${creditor.name}'e aktardı!</span>`);
+      get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, ${totalCoins} altın borcu ödeyemedi ve ${creditor.name}'e aktardı!</span>`);
+    } else {
+      // Eğer alacaklı yoksa, parayı oyun bankasına aktar
+      get().addToLog(`<span class="text-red-500">💥 İFLAS: ${player.name}, ${totalCoins} altın borcu ödeyemedi ve oyun bankasına aktardı!</span>`);
     }
 
-    // Release all properties
+    // Tüm mülkleri otomatik olarak açık artırmaya çıkar
     player.properties.forEach(property => {
       property.ownerId = null;
       property.level = 1;
       property.rent = property.baseRent;
       property.upgradePrice = Math.floor(property.baseRent * 1.5);
+      
+      // Mülkü açık artırmaya çıkar
+      get().addToLog(`<span class="text-blue-500">🏘️ ${property.name} açık artırmada!</span>`);
     });
+
+    // Oyuncunun mülklerini sıfırla
+    player.properties = [];
 
     // Show bankruptcy dialog for human players
     if (!player.isBot) {
@@ -71,9 +91,6 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
 
     // Daha detaylı log mesajları
     get().addToLog(`<span class="text-yellow-500">🏴 ${player.name} tüm varlıklarını kaybetti!</span>`);
-    if (player.properties.length > 0) {
-      get().addToLog(`<span class="text-blue-500">🏘️ ${player.name}'nin tüm mülkleri satışa çıktı!</span>`);
-    }
 
     // Remove player from game
     const playerIndex = players.findIndex(p => p.id === player.id);
@@ -106,9 +123,12 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
       get().addToLog(`<span class="text-green-500">🏆 ${players[0].name} oyunu kazandı!</span>`);
       set({ winner: players[0] });
     } else {
-      // If next player is bot, trigger bot turn after a delay
+      // İflas eden bot ise zar sırasını atla
       const nextPlayer = players[playerIndex % players.length];
       if (nextPlayer?.isBot) {
+        // Zar sırasını ve konumunu sıfırla
+        nextPlayer.position = -1;
+        nextPlayer.isBankrupt = true;
         setTimeout(() => get().handleBotTurn(), 1500);
       }
     }

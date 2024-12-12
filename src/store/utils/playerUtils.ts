@@ -68,14 +68,18 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
     }
 
     // Tüm mülkleri otomatik olarak açık artırmaya çıkar
-    player.properties.forEach(property => {
-      property.ownerId = null;
-      property.level = 1;
-      property.rent = property.baseRent;
-      property.upgradePrice = Math.floor(property.baseRent * 1.5);
+    player.properties.forEach(prop => {
+      // Mülkün sahibini sıfırla
+      const squareIndex = get().squares.findIndex((sq: any) => sq.property?.id === prop.id);
+      if (squareIndex !== -1 && get().squares[squareIndex].property) {
+        get().squares[squareIndex].property.ownerId = null;
+        get().squares[squareIndex].property.level = 1;
+        get().squares[squareIndex].property.rent = get().squares[squareIndex].property.baseRent;
+        get().squares[squareIndex].property.upgradePrice = Math.floor(get().squares[squareIndex].property.baseRent * 1.5);
+      }
       
       // Mülkü açık artırmaya çıkar
-      get().addToLog(`<span class="text-blue-500">🏘️ ${property.name} açık artırmada!</span>`);
+      get().addToLog(`<span class="text-blue-500">🏘️ ${prop.name} açık artırmada!</span>`);
     });
 
     // Oyuncunun mülklerini sıfırla
@@ -93,7 +97,7 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
     get().addToLog(`<span class="text-yellow-500">🏴 ${player.name} tüm varlıklarını kaybetti!</span>`);
 
     // Remove player from game
-    const playerIndex = players.findIndex(p => p.id === player.id);
+    const playerIndex = players.findIndex((p: Player) => p.id === player.id);
     players.splice(playerIndex, 1);
 
     // Show notification
@@ -123,7 +127,7 @@ export function handleBankruptcy(player: Player, owedAmount: number, creditor: P
       get().addToLog(`<span class="text-green-500">🏆 ${players[0].name} oyunu kazandı!</span>`);
       set({ winner: players[0] });
     } else {
-      // İflas eden bot ise zar sırasını atla
+      // İflas eden oyuncu bot ise zar sırasını atla
       const nextPlayer = players[playerIndex % players.length];
       if (nextPlayer?.isBot) {
         // Zar sırasını ve konumunu sıfırla

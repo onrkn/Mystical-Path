@@ -646,33 +646,51 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
   // Mülk sahibini bul (son kirayı ödemek zorunda kaldığı oyuncu)
   const rentOwner = owner || state.rentInfo?.owner;
 
-  // Oyuncunun tüm parasını mülk sahibine aktar
-  const transferAmount = Math.min(bankruptPlayer.coins, rentAmount || 0);
-  if (rentOwner) {
-    rentOwner.coins += transferAmount;
-    rentOwner.rentCollected += transferAmount;
-    
-    gameGet().addToLog(`<span class="text-green-500">💰 ${rentOwner.name}, ${bankruptPlayer.name}'ın kalan ${transferAmount} parasını aldı!</span>`);
-  }
+  // Oyuncunun tüm mülklerini tespit et ve güncelle
+  const playerProperties = squares.filter((square: any) => 
+    square.property && square.property.ownerId === playerId
+  );
 
-  // Oyuncunun tüm mülklerini serbest bırak ve sahibini sıfırla
-  bankruptPlayer.properties.forEach(prop => {
-    // Mülkün sahibini sıfırla
-    const squareIndex = squares.findIndex(sq => sq.property?.id === prop.id);
-    if (squareIndex !== -1 && squares[squareIndex].property) {
-      squares[squareIndex].property.ownerId = null;
-      squares[squareIndex].property.level = 1;
+  // Her bir mülkü sahipsiz bırak ve tekrar satışa çıkar
+  playerProperties.forEach((square: any) => {
+    if (square.property) {
+      // Mülkün özelliklerini sıfırla
+      square.property.ownerId = null;
+      square.property.level = 1;
+      square.property.rent = square.property.baseRent;
+      square.property.upgradePrice = Math.floor(square.property.baseRent * 1.5);
+      
+      // Log mesajı ekle
+      gameGet().addToLog(`<span class="text-blue-500">🏘️ ${square.property.name} açık artırmada!</span>`);
     }
   });
 
-  // Oyuncuyu iflas ettir
-  bankruptPlayer.isBankrupt = true;
-  bankruptPlayer.coins = 0;
+  // Oyuncunun kendi property listesini de temizle
   bankruptPlayer.properties = [];
-  bankruptPlayer.position = -1; // Oyun tahtasından çıkar
 
-  // Oyuncuları güncelle (iflas eden oyuncuyu çıkar)
-  const updatedPlayers = players.filter(p => p.id !== playerId);
+  // Alacaklıya kalan parayı aktar
+  if (rentOwner && bankruptPlayer.coins > 0) {
+    const transferAmount = bankruptPlayer.coins;
+    rentOwner.coins += transferAmount;
+    rentOwner.rentCollected += transferAmount;
+    
+    gameGet().addToLog(`<span class="text-green-500">💰 ${rentOwner.name}, ${bankruptPlayer.name}'den ${transferAmount} altın aldı!</span>`);
+  }
+
+  // Oyuncunun parasını sıfırla
+  bankruptPlayer.coins = 0;
+
+  // İflas bildirimi
+  gameGet().showNotification({
+    title: 'İFLAS!',
+    message: `${bankruptPlayer.name} iflas etti ve oyundan elendi!`,
+    type: 'error'
+  });
+
+  gameGet().addToLog(`<span class="text-red-500">💥 ${bankruptPlayer.name} iflas etti!</span>`);
+
+  // Oyuncuyu oyun listesinden çıkar
+  const updatedPlayers = players.filter((p: Player) => p.id !== playerId);
 
   console.log('🏁 Post Bankruptcy:', {
     remainingPlayers: updatedPlayers.length,
@@ -709,7 +727,7 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
   // Oyun durumunu güncelle
   gameSet({
     players: updatedPlayers,
-    squares: [...squares], // Squares'ı güncel tut
+    squares: [...squares], // Güncel kare bilgileri
     currentPlayerIndex: newCurrentPlayerIndex,
     gameMessage: `${bankruptPlayer.name} oyundan elendi!`,
     showRentDialog: false,

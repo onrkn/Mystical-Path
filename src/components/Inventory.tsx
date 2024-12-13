@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, 
-  Sword, 
   Crown, 
   CircleOff, 
   Sparkles,
@@ -17,10 +16,30 @@ import type { Item } from '../types/game';
 import { useGameStore } from '../store/gameStore';
 
 const itemIcons = {
-  helmet: Crown,
-  weapon: Sword,
-  armor: Shirt,
-  shield: Shield
+  helmet: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/helmet.png)' }}
+    />
+  ),
+  weapon: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/axe.png)' }}
+    />
+  ),
+  armor: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/armor.png)' }}
+    />
+  ),
+  shield: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/shield.png)' }}
+    />
+  ),
 };
 
 const rarityColors = {
@@ -73,7 +92,7 @@ function InventorySlot({ item, type }: InventorySlotProps) {
           p-2 rounded-full bg-white shadow-md
           ${item ? 'border-2 ' + (rarityStyle.bg.replace('bg-', 'border-')) : 'border-dashed border-gray-300'}
         `}>
-          <Icon className="w-6 h-6" />
+          {Icon()}
         </div>
         <div>
           <h4 className="font-bold text-sm">{item ? item.name : `Boş ${type}`}</h4>

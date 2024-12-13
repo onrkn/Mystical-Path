@@ -160,9 +160,9 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
       
       {isKingOnSquare && (
         <div 
-          className="absolute bottom-1 left-1 w-8 h-8 bg-cover bg-center" 
+          className="absolute bottom-1 left-1 w-8 h-8 bg-cover bg-center mix-blend-multiply" 
           style={{ 
-            backgroundImage: 'url(/king-sprite.svg)',
+            backgroundImage: 'url(/src/assets/king.gif)',
             zIndex: 20
           }}
         />

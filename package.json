@@ -36,6 +36,7 @@
     "react-hot-toast": "^2.4.1",
     "react-parallax-tilt": "^1.7.265",
     "react-router-dom": "^7.0.2",
+    "react-toastify": "^10.0.6",
     "tailwind-merge": "^2.2.1",
     "three": "^0.171.0",
     "uuid": "^11.0.3",

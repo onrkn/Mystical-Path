@@ -102,10 +102,30 @@ export function Market() {
   };
 
   const itemIcons = {
-    weapon: <Sword className="w-6 h-6 text-purple-600" />,
-    armor: <Shirt className="w-6 h-6 text-purple-600" />,
-    shield: <Shield className="w-6 h-6 text-purple-600" />,
-    helmet: <Crown className="w-6 h-6 text-purple-600" />,
+    weapon: () => (
+      <div 
+        className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+        style={{ backgroundImage: 'url(/src/assets/axe.png)' }}
+      />
+    ),
+    armor: () => (
+      <div 
+        className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+        style={{ backgroundImage: 'url(/src/assets/armor.png)' }}
+      />
+    ),
+    shield: () => (
+      <div 
+        className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+        style={{ backgroundImage: 'url(/src/assets/shield.png)' }}
+      />
+    ),
+    helmet: () => (
+      <div 
+        className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+        style={{ backgroundImage: 'url(/src/assets/helmet.png)' }}
+      />
+    ),
   };
 
   const renderPropertyIcon = (propertyName: string) => {
@@ -163,6 +183,7 @@ export function Market() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="font-medium flex items-center gap-2">
                         {item ? rarityIcons[item.rarity] : null}
+                        {item ? itemIcons[item.type]() : null}
                         {item ? item.name : `Boş ${slot}`}
                       </div>
                       {item && <Gem className="w-4 h-4 text-purple-500" />}
@@ -221,7 +242,7 @@ export function Market() {
                   <div className="flex justify-between items-center mb-2">
                     <div className="font-medium flex items-center gap-2">
                       {rarityIcons[item.rarity]}
-                      {itemIcons[item.type]}
+                      {itemIcons[item.type]()}
                       {item.name}
                     </div>
                     <Gem className="w-4 h-4 text-purple-500" />

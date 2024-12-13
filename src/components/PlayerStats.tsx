@@ -118,7 +118,7 @@ export function PlayerStats() {
               >
                 <div className="space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <div 
                         className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
                         style={{ backgroundColor: player.color }}
@@ -127,7 +127,7 @@ export function PlayerStats() {
                           {player.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
+                      <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{player.name}</span>
                           {index === currentPlayerIndex && (
@@ -136,54 +136,44 @@ export function PlayerStats() {
                             </span>
                           )}
                         </div>
-                        <div 
-                          onClick={() => setExpandedPlayer(expandedPlayer === player.id ? null : player.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer hover:text-gray-700 transition-colors"
-                        >
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>{playerProperties?.length || 0} mülk</span>
-                          {playerProperties?.length > 0 && (
-                            expandedPlayer === player.id ? 
-                              <ChevronUp className="w-3.5 h-3.5" /> : 
-                              <ChevronDown className="w-3.5 h-3.5" />
-                          )}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                            <span className="font-medium text-gray-700">{player.coins}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="font-medium text-gray-700">Lv.{player.level}</span>
+                            <span className="text-[10px] text-gray-400">({player.xp} XP)</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Swords className="w-3.5 h-3.5 text-red-500" />
+                            <span className="font-medium text-gray-700">{strength}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setSelectedPlayer(player.id)}
-                      className="p-1.5 hover:bg-white/80 rounded transition-colors"
-                      title="İstatistikleri Göster"
-                    >
-                      <BarChart2 className="w-4 h-4 text-gray-400" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedPlayer(player.id)}
+                        className="p-1.5 hover:bg-white/80 rounded transition-colors"
+                        title="İstatistikleri Göster"
+                      >
+                        <BarChart2 className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 bg-gray-50/50 p-2 rounded-lg">
-                    <div className="flex flex-col items-center p-2 rounded-lg bg-white/80 hover:bg-white transition-colors border border-gray-100">
-                      <div className="flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                        <span className="text-sm font-medium text-gray-700">{player.coins}</span>
-                      </div>
-                      <span className="text-[10px] font-medium text-gray-400 mt-1">Altın</span>
-                    </div>
-                    <div className="flex flex-col items-center p-2 rounded-lg bg-white/80 hover:bg-white transition-colors border border-gray-100">
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-sm font-medium text-gray-700">Lv.{player.level}</span>
-                      </div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-[10px] font-medium text-gray-400">XP:</span>
-                        <span className="text-[10px] font-medium text-blue-500">{player.xp}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center p-2 rounded-lg bg-white/80 hover:bg-white transition-colors border border-gray-100">
-                      <div className="flex items-center gap-1.5">
-                        <Swords className="w-3.5 h-3.5 text-red-500" />
-                        <span className="text-sm font-medium text-gray-700">{strength}</span>
-                      </div>
-                      <span className="text-[10px] font-medium text-gray-400 mt-1">STR</span>
-                    </div>
+                  <div 
+                    onClick={() => setExpandedPlayer(expandedPlayer === player.id ? null : player.id)}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer hover:text-gray-700 transition-colors"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>{playerProperties?.length || 0} mülk</span>
+                    {playerProperties?.length > 0 && (
+                      expandedPlayer === player.id ? 
+                        <ChevronUp className="w-3.5 h-3.5" /> : 
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    )}
                   </div>
 
                   {expandedPlayer === player.id && playerProperties && playerProperties.length > 0 && (

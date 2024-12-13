@@ -43,6 +43,7 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         player.coins += goldReward;
         player.xp += xpReward;
         player.cardBonuses += goldReward;
+        player.defeatedBosses = (player.defeatedBosses || 0) + 1; // Ejderha sayacını artır
 
         // Show combat animation
         set({ 

@@ -42,7 +42,8 @@ const initialState: GameState = {
   settings: {
     ...defaultSettings,
     musicEnabled: true,     // Varsayılan olarak müzik açık
-    soundEffectsEnabled: true  // Varsayılan olarak ses efektleri açık
+    soundEffectsEnabled: true,  // Varsayılan olarak ses efektleri açık
+    dragonBossWinEnabled: true, // Ejderha boss kazanma özelliği
   },
   notifications: [],
   waitingForDecision: false,
@@ -364,6 +365,7 @@ const loadSavedSettings = () => {
         ...defaultSettings,
         musicEnabled: parsedSettings.musicEnabled !== undefined ? parsedSettings.musicEnabled : true,
         soundEffectsEnabled: parsedSettings.soundEffectsEnabled !== undefined ? parsedSettings.soundEffectsEnabled : true,
+        dragonBossWinEnabled: parsedSettings.dragonBossWinEnabled !== undefined ? parsedSettings.dragonBossWinEnabled : true,
         ...parsedSettings
       };
     } catch (error) {
@@ -387,35 +389,35 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
     }
   });
 
-  const players = playerNames.map((name, index) => ({
-    id: `player-${index}`,
+  const initialPlayers = playerNames.map((name, index) => ({
+    id: `player-${index + 1}`,
     name,
     isBot: playerTypes[index] === 'bot',
     color: generatePlayerColor(index),
     position: 0,
-    coins: settings.startingMoney,
+    coins: get().settings.startingMoney,
     score: 0,
     level: 1,
     xp: 0,
-    strength: 1,
+    strength: 1,  // 10'dan 1'e düşürüldü
+    dragonKills: 0,  // Başlangıçta ejderha öldürme sayısı 0
     properties: [],
     inventory: {},
     inJail: false,
-    jailTurnsLeft: 0,
-    allianceId: null,
-    startBonusCount: 0,
-    rentCollected: 0,
-    cardBonuses: 0,
-    itemSales: 0,
-    propertyPurchases: 0,
-    propertyUpgrades: 0,
-    rentPaid: 0,
-    itemPurchases: 0,
-    penalties: 0
+    jailTurns: 0,
+    isKing: false,
+    isBankrupt: false,
+    lastRoll: null,
+    lastRoll2: null,
+    canRoll: true,
+    canMove: true,
+    canBuy: true,
+    canTrade: true,
+    canUseItems: true,
   }));
 
   set({
-    players,
+    players: initialPlayers,
     gameStarted: true,
     currentPlayerIndex: 0,
     gameLog: ['Oyun başladı!'],
@@ -423,7 +425,7 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
     isRolling: false
   });
 
-  if (players[0].isBot) {
+  if (initialPlayers[0].isBot) {
     setTimeout(() => get().handleBotTurn(), 1500);
   }
 };
@@ -884,12 +886,29 @@ const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: ()
 
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
-  settings: loadSavedSettings(), // Kaydedilen ayarları yükle
+  settings: loadSavedSettings(),
   ...handlePropertyActions(set, get),
   ...handleMarketActions(set, get),
   ...handleAllianceActions(set, get),
   ...handleBotActions(set, get),
-  ...handleCombatActions(set, get),
+  ...handleCombatActions(set, get, (player, won) => {
+    if (won && get().activeBoss?.type === 'dragon') {
+      set(state => {
+        const updatedPlayers = state.players.map(p => {
+          if (p.id === player.id) {
+            const newDragonKills = (p.dragonKills || 0) + 1;
+            // Ejderha öldürme sayısı 3'e ulaştıysa ve özellik aktifse oyunu kazan
+            if (newDragonKills >= 3 && get().settings.dragonBossWinEnabled) {
+              setTimeout(() => set({ winner: p }), 0);
+            }
+            return { ...p, dragonKills: newDragonKills };
+          }
+          return p;
+        });
+        return { players: updatedPlayers };
+      });
+    }
+  }),
   
   calculateItemBonuses,
   getBotMarketDecision,

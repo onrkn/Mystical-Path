@@ -13,7 +13,7 @@ import {
   ScrollText, 
   Layers, 
   Crown, 
-  Sparkles 
+  Sparkles
 } from 'lucide-react';
 
 // Kral animasyonu için CSS keyframes
@@ -24,6 +24,23 @@ const kingAnimationStyle = `
   background-image: url('/king-sprite.svg');
   background-size: cover;
   z-index: 10;
+}
+
+.glow-red {
+  box-shadow: 0 0 5px 1px rgba(239, 68, 68, 0.3);
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 `;
 
@@ -106,6 +123,25 @@ export function GameBoard() {
     };
   }, [settings.kingEnabled]); // settings.kingEnabled değiştiğinde effect'i yeniden çalıştır
 
+  // Oyuncu bilgilerini göster
+  const renderPlayerInfo = (player: any) => {
+    const isActive = player.id === players[useGameStore.getState().currentPlayerIndex].id;
+    return (
+      <div key={player.id} className={`player-info ${isActive ? 'active' : ''}`}>
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-4 h-4 rounded-full" 
+            style={{ backgroundColor: player.color }}
+          />
+          <div className="flex-1">
+            <span style={{ color: player.color }}>{player.name}</span>
+            {isActive && <span className="ml-2">(Aktif)</span>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <style>{kingAnimationStyle}</style>
@@ -158,16 +194,63 @@ export function GameBoard() {
                 <h3 className="text-2xl font-bold text-gray-800">Oyun Tahtası</h3>
               </div>
               
-              {settings.kingEnabled && (
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center space-x-2 text-gray-600"
-                >
-                  <Crown className="w-5 h-5 text-yellow-500" />
-                  <span className="font-medium">Kral Aktif</span>
-                </motion.div>
-              )}
+              <div className="flex items-center gap-4">
+                {/* Kral Bölümü */}
+                {settings.kingEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center bg-gradient-to-r from-yellow-900/80 to-amber-900/80 backdrop-blur-md rounded-md px-3 py-1.5 shadow-lg border border-amber-500/20 text-sm hover:from-yellow-800/80 hover:to-amber-800/80 transition-colors duration-300"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <div className="bg-amber-500/20 p-1 rounded-full border border-amber-500/30 shadow-amber-500/20 shadow-inner">
+                        <Crown className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <span className="font-medium text-amber-200/90">Kral Aktif</span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Ejderha Sayaçları */}
+                {settings.dragonBossWinEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center bg-gradient-to-r from-red-900/80 to-purple-900/80 backdrop-blur-md rounded-md px-3 py-1.5 shadow-lg border border-purple-500/20 text-sm hover:from-red-800/80 hover:to-purple-800/80 transition-colors duration-300"
+                  >
+                    <div className="flex items-center gap-2">
+                      <img 
+                        src="/dragon.png" 
+                        alt="Dragon" 
+                        className="w-5 h-5 -mt-0.5 brightness-110 contrast-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] animate-pulse-subtle" 
+                      />
+                      <div className="flex items-center gap-2">
+                        {players.map((player) => (
+                          <div 
+                            key={player.id} 
+                            className="flex items-center gap-1 bg-purple-950/50 px-2 py-0.5 rounded-md border border-purple-500/20 shadow-inner hover:bg-purple-900/50 transition-colors duration-200"
+                            title={`${player.name}'nin ejderha skoru`}
+                          >
+                            <div 
+                              className="w-2.5 h-2.5 rounded-full ring-1 ring-white/10 shadow-lg" 
+                              style={{ backgroundColor: player.color }}
+                            />
+                            <span 
+                              className="font-medium tracking-wide" 
+                              style={{ 
+                                color: player.color,
+                                textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                              }}
+                            >
+                              {player.dragonKills || 0}/3
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
             
             <div className="grid grid-cols-8 gap-2 relative">

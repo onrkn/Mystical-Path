@@ -49,6 +49,7 @@ export interface Player {
   level: number;
   xp: number;
   strength: number;
+  dragonKills: number;  // Ejderha öldürme sayacı
   properties: Property[];
   inventory: {
     [key in ItemType]?: Item;
@@ -111,6 +112,7 @@ export interface GameSettings {
   propertyPriceMultiplier: number;
   propertyRentMultiplier: number;
   kingEnabled: boolean;
+  dragonBossWinEnabled: boolean; // Ejderha boss kazanma ayarı
 }
 
 export type Square = {

@@ -3,7 +3,7 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 export function Tooltip({ children }: { children: ReactNode }) {
   return (
-    <TooltipPrimitive.Provider>
+    <TooltipPrimitive.Provider delayDuration={0}>
       <TooltipPrimitive.Root>
         {children}
       </TooltipPrimitive.Root>
@@ -13,7 +13,7 @@ export function Tooltip({ children }: { children: ReactNode }) {
 
 export function TooltipTrigger({ children }: { children: ReactNode }) {
   return (
-    <TooltipPrimitive.Trigger asChild>
+    <TooltipPrimitive.Trigger>
       {children}
     </TooltipPrimitive.Trigger>
   );
@@ -25,19 +25,20 @@ export function TooltipContent({ children }: { children: ReactNode }) {
       <TooltipPrimitive.Content
         className="
           z-50 
-          bg-blue-800 
+          bg-gray-900 
           text-white 
           text-xs 
-          rounded-md 
-          p-2 
+          rounded-lg 
+          p-3 
           max-w-xs 
           shadow-lg
           animate-fade-in
+          border border-gray-800
         "
         sideOffset={5}
       >
         {children}
-        <TooltipPrimitive.Arrow className="fill-blue-800" />
+        <TooltipPrimitive.Arrow className="fill-gray-900" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

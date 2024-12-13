@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { CloudRain } from './icons/CloudRain';
+import { CloudRain, Crown, HelpCircle } from 'lucide-react';
 import { Switch } from './Switch';
-import { HelpCircle } from './icons/HelpCircle';
-import { Tooltip, TooltipTrigger, TooltipContent } from './Tooltip';
 import { playSwitchSound } from '../utils/soundUtils';
 import { playButtonClickSound } from '../utils/soundUtils';
 import { stopBackgroundMusic, playBackgroundMusic } from '../utils/soundUtils';
+import { Tooltip, TooltipTrigger, TooltipContent } from './Tooltip';
 
 export function GameSettings() {
   const { settings, updateSettings } = useGameStore();
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'game' | 'sound'>('game');
+  const [activeTab, setActiveTab] = useState<'game' | 'modes' | 'sound'>('game');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -33,6 +32,7 @@ export function GameSettings() {
 
     // Ayarları güncelle
     updateSettings({ 
+      ...settings,
       weatherEnabled: checked 
     });
 
@@ -48,7 +48,19 @@ export function GameSettings() {
 
     // Ayarları güncelle
     updateSettings({ 
+      ...settings,
       kingEnabled: checked 
+    });
+  };
+
+  const handleDragonBossWinToggle = (checked: boolean) => {
+    // Ses çal
+    playSwitchSound();
+
+    // Ayarları güncelle
+    updateSettings({ 
+      ...settings,
+      dragonBossWinEnabled: checked 
     });
   };
 
@@ -58,10 +70,11 @@ export function GameSettings() {
 
     // Ayarları güncelle
     updateSettings({ 
+      ...settings,
       musicEnabled: checked 
     });
 
-    // Müzik ayarını değiştir
+    // Müziği aç/kapat
     if (checked) {
       playBackgroundMusic();
     } else {
@@ -75,6 +88,7 @@ export function GameSettings() {
 
     // Ayarları güncelle
     updateSettings({ 
+      ...settings,
       soundEffectsEnabled: checked 
     });
   };
@@ -115,6 +129,14 @@ export function GameSettings() {
             Oyun Ayarları
           </button>
           <button 
+            onClick={() => setActiveTab('modes')}
+            className={`px-4 py-2 ${activeTab === 'modes' 
+              ? 'border-b-2 border-blue-500 text-blue-600' 
+              : 'text-gray-500'}`}
+          >
+            Oyun Modları
+          </button>
+          <button 
             onClick={() => setActiveTab('sound')}
             className={`px-4 py-2 ${activeTab === 'sound' 
               ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -127,8 +149,20 @@ export function GameSettings() {
         {activeTab === 'game' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
                 Başlangıç Parası
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Oyunun başlangıcında oyunculara verilen para miktarı.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </label>
               <input
                 type="number"
@@ -141,8 +175,20 @@ export function GameSettings() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
                 Başlangıç Noktası Bonus
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Oyunun başlangıcında oyuncuların aldıkları bonus puanı.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </label>
               <input
                 type="number"
@@ -156,8 +202,20 @@ export function GameSettings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
                 Arsa Fiyat Çarpanı
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Arsa fiyatlarının oyuna göre değişimini belirler.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </label>
               <input
                 type="number"
@@ -172,8 +230,20 @@ export function GameSettings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
                 Kira Çarpanı
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Kira gelirlerinin oyuna göre değişimini belirler.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </label>
               <input
                 type="number"
@@ -186,23 +256,31 @@ export function GameSettings() {
                 className="w-full p-2 border rounded-md"
               />
             </div>
+          </div>
+        )}
 
+        {activeTab === 'modes' && (
+          <div className="space-y-4">
+            {/* Hava Durumu Sistemi */}
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-all duration-300 group">
               <div className="flex items-center space-x-4">
                 <CloudRain className="w-6 h-6 text-blue-600" />
                 <div>
-                  <h3 className="text-sm font-semibold text-blue-800 flex items-center">
+                  <h3 className="text-sm font-semibold text-blue-800 flex items-center gap-2">
                     Hava Durumu Sistemi
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="w-4 h-4 ml-2 text-blue-500 hover:text-blue-700" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Hava durumu sistemi oyunun dinamikliğini artırır.</p>
-                        <p>Yağmur yağdığında tüm kira gelirleri %50 düşer.</p>
-                        <p>Açık/kapalı olarak ayarlayabilirsiniz.</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <div className="relative">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="w-4 h-4 text-blue-500 hover:text-blue-700 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <p>Hava durumu sistemi oyunun dinamikliğini artırır.</p>
+                            <p>Yağmur yağdığında tüm kira gelirleri %50 düşer.</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </h3>
                   <p className="text-xs text-blue-600">Oyunun hava koşullarını kontrol et</p>
                 </div>
@@ -215,56 +293,30 @@ export function GameSettings() {
               />
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-all duration-300 group">
+            {/* Kral Özelliği */}
+            <div className="bg-gradient-to-r from-yellow-50 to-amber-100 border border-amber-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-all duration-300 group">
               <div className="flex items-center space-x-4">
+                <div className="bg-amber-500/20 p-1 rounded-full">
+                  <Crown className="w-6 h-6 text-amber-600" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
-                    <span>Kral Özelliği</span>
+                  <h3 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                    Kral Özelliği
                     <div className="relative">
-                      <span 
-                        className="cursor-pointer text-gray-400 hover:text-gray-600"
-                        onClick={toggleTooltip}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.513 1.324 1.513 3.518 0 4.842a3.75 3.75 0 01-.837.552c-.676.328-1.028.774-1.028 1.152v.75a.75.75 0 01-1.5 0v-.75c0-1.279 1.06-2.107 1.875-2.502.182-.088.351-.199.503-.331.83-.727.83-1.857 0-2.584zM12 18a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
-                        </svg>
-                      </span>
-                      {isTooltipVisible && (
-                        <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg shadow-lg p-3 transition-all duration-300">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              viewBox="0 0 24 24" 
-                              className="w-5 h-5 text-yellow-400"
-                              fill="currentColor"
-                            >
-                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11z"/>
-                            </svg>
-                            <span className="font-bold">Kral Özelliği</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="w-4 h-4 text-amber-500 hover:text-amber-700 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <p>Kral oyun tahtasında rastgele hareket eder.</p>
+                            <p>Kralın bulunduğu mülkte kira gelirleri 10 katına çıkar!</p>
                           </div>
-                          <p>
-                            Oyun tahtasında rastgele hareket eden kral, bulunduğu mülkte 
-                            kira gelirini 10 katına çıkarır! Stratejik bir unsur olarak 
-                            oyuna heyecan katar.
-                          </p>
-                        </div>
-                      )}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                    <span 
-                      className={`px-2 py-0.5 rounded-full text-xs ${
-                        settings.kingEnabled 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {settings.kingEnabled ? 'Aktif' : 'Pasif'}
-                    </span>
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    {settings.kingEnabled 
-                      ? "Kral oyun tahtasında hareket ediyor" 
-                      : "Kral oyun dışı"}
-                  </p>
+                  <p className="text-xs text-amber-600">Kral oyun tahtasında hareket ediyor</p>
                 </div>
               </div>
               <Switch
@@ -275,47 +327,84 @@ export function GameSettings() {
               />
             </div>
 
-            {activeTab === 'sound' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span>Müzik</span>
-                  <Switch 
-                    checked={settings.musicEnabled} 
-                    onCheckedChange={handleMusicToggle}
-                    activeColor="bg-green-500"
-                    inactiveColor="bg-red-500"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Ses Efektleri</span>
-                  <Switch 
-                    checked={settings.soundEffectsEnabled} 
-                    onCheckedChange={handleSoundEffectsToggle}
-                    activeColor="bg-green-500"
-                    inactiveColor="bg-red-500"
-                  />
+            {/* Ejderha Boss Kazanma */}
+            <div className="bg-gradient-to-r from-red-50 to-purple-100 border border-purple-200 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-all duration-300 group">
+              <div className="flex items-center space-x-4">
+                <img src="/dragon.png" alt="Dragon" className="w-6 h-6" />
+                <div>
+                  <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-2">
+                    Ejderha Avcısı
+                    <div className="relative">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="w-4 h-4 text-purple-500 hover:text-purple-700 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <p>Ejderha boss'u yendiğinizde sayaç artar.</p>
+                            <p>3 ejderha öldüren oyuncu oyunu kazanır!</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </h3>
+                  <p className="text-xs text-purple-600">Ejderhaları öldürerek de oyunu kazanabilirsin</p>
                 </div>
               </div>
-            )}
+              <Switch
+                checked={settings.dragonBossWinEnabled}
+                onCheckedChange={handleDragonBossWinToggle}
+                activeColor="bg-green-500"
+                inactiveColor="bg-red-500"
+              />
+            </div>
           </div>
         )}
 
         {activeTab === 'sound' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span>Müzik</span>
+              <span className="flex items-center gap-2">
+                Müzik
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Oyunun arka plan müziğini açar/kapatır.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </span>
               <Switch 
                 checked={settings.musicEnabled} 
-                onCheckedChange={handleMusicToggle}
+                onCheckedChange={(checked) => handleMusicToggle(checked)}
                 activeColor="bg-green-500"
                 inactiveColor="bg-red-500"
               />
             </div>
             <div className="flex items-center justify-between">
-              <span>Ses Efektleri</span>
+              <span className="flex items-center gap-2">
+                Ses Efektleri
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p>Oyunun ses efektlerini açar/kapatır.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </span>
               <Switch 
                 checked={settings.soundEffectsEnabled} 
-                onCheckedChange={handleSoundEffectsToggle}
+                onCheckedChange={(checked) => handleSoundEffectsToggle(checked)}
                 activeColor="bg-green-500"
                 inactiveColor="bg-red-500"
               />

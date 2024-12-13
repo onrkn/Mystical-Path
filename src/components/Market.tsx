@@ -21,6 +21,13 @@ import { getPropertyIcon } from './PropertyIcons';
 import { cn } from '../utils/cn';
 import { playMagicShopPurchaseSound, stopBackgroundMusic, playBackgroundMusic, playMarketMusic, stopMarketMusic } from '../utils/soundUtils';
 
+const slotLabels = {
+  helmet: 'Kask',
+  weapon: 'Silah',
+  armor: 'Zırh',
+  shield: 'Kalkan'
+};
+
 export function Market() {
   const [items, setItems] = useState(() => Array(6).fill(null).map(() => generateRandomItem()));
   const { players, currentPlayerIndex, equipItem } = useGameStore();
@@ -162,7 +169,10 @@ export function Market() {
           {/* Current Inventory */}
           <div className="bg-white/70 rounded-xl p-4 lg:p-6 border-2 border-purple-200 shadow-lg">
             <h3 className="text-xl lg:text-2xl font-semibold mb-4 text-purple-900 flex items-center gap-2">
-              <Scroll className="w-6 h-6 text-purple-600" />
+              <div 
+                className="w-6 h-6 bg-contain bg-center bg-no-repeat"
+                style={{ backgroundImage: 'url(/assets/bag.png)' }}
+              />
               Mevcut Envanter
             </h3>
             <div className="grid grid-cols-2 gap-3 lg:gap-4">
@@ -173,19 +183,19 @@ export function Market() {
                     key={slot}
                     className={cn(
                       'p-3 rounded-lg text-sm transition-all',
-                      item ? rarityColors[item.rarity] : 'bg-gray-100 border-2 border-dashed border-gray-300'
+                      item ? rarityColors[item.rarity] : 'bg-gray-100/80 hover:bg-gray-100 border-2 border-gray-300/50'
                     )}
                   >
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="font-medium flex items-center gap-2">
-                        {item ? rarityIcons[item.rarity] : null}
-                        {item ? itemIcons[item.type]() : null}
-                        {item ? item.name : `Boş ${slot}`}
-                      </div>
-                      {item && <Gem className="w-4 h-4 text-purple-500" />}
-                    </div>
-                    {item && (
+                    {item ? (
                       <>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="font-medium flex items-center gap-2">
+                            {rarityIcons[item.rarity]}
+                            {itemIcons[item.type]()}
+                            {item.name}
+                          </div>
+                          {item && <Gem className="w-4 h-4 text-purple-500" />}
+                        </div>
                         <div className="text-xs text-gray-600 mb-2">{item.type}</div>
                         <div className="text-xs space-y-1">
                           {item.effects.map((effect, i) => (
@@ -208,6 +218,12 @@ export function Market() {
                           </div>
                         </div>
                       </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-3 opacity-60 hover:opacity-80 transition-opacity">
+                        {itemIcons[slot]()}
+                        <span className="text-xs text-gray-500 mt-2 font-medium">{slotLabels[slot]} Slotu</span>
+                        <span className="text-xs text-gray-400 mt-0.5">Boş</span>
+                      </div>
                     )}
                   </div>
                 );

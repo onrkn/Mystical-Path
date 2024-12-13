@@ -101,25 +101,25 @@ export function Market() {
     weapon: () => (
       <div 
         className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-        style={{ backgroundImage: 'url(/src/assets/axe.png)' }}
+        style={{ backgroundImage: 'url(/assets/axe.png)' }}
       />
     ),
     armor: () => (
       <div 
         className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-        style={{ backgroundImage: 'url(/src/assets/armor.png)' }}
+        style={{ backgroundImage: 'url(/assets/armor.png)' }}
       />
     ),
     shield: () => (
       <div 
         className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-        style={{ backgroundImage: 'url(/src/assets/shield.png)' }}
+        style={{ backgroundImage: 'url(/assets/shield.png)' }}
       />
     ),
     helmet: () => (
       <div 
         className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-        style={{ backgroundImage: 'url(/src/assets/helmet.png)' }}
+        style={{ backgroundImage: 'url(/assets/helmet.png)' }}
       />
     ),
   };

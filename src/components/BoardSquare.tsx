@@ -27,33 +27,38 @@ const squareIcons = {
   market: () => (
     <div 
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-      style={{ backgroundImage: 'url(/src/assets/shopping-bags.png)' }}
+      style={{ backgroundImage: 'url(/assets/shopping-bags.png)' }}
     />
   ),
   sans: () => (
     <div 
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-      style={{ backgroundImage: 'url(/src/assets/clover.png)' }}
+      style={{ backgroundImage: 'url(/assets/clover.png)' }}
     />
   ),
   ceza: () => (
     <div 
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-      style={{ backgroundImage: 'url(/src/assets/red-card.png)' }}
+      style={{ backgroundImage: 'url(/assets/red-card.png)' }}
     />
   ),
   bonus: () => (
     <div 
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-      style={{ backgroundImage: 'url(/src/assets/treasure.png)' }}
+      style={{ backgroundImage: 'url(/assets/treasure.png)' }}
     />
   ),
   arsa: Home,
-  boss: Skull,
+  boss: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/assets/dragon.png)' }}
+    />
+  ),
   park: () => (
     <div 
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-      style={{ backgroundImage: 'url(/src/assets/playground.png)' }}
+      style={{ backgroundImage: 'url(/assets/playground.png)' }}
     />
   )
 };
@@ -190,7 +195,7 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
         <div 
           className="absolute bottom-1 left-1 w-8 h-8 bg-cover bg-center mix-blend-multiply" 
           style={{ 
-            backgroundImage: 'url(/src/assets/king.gif)',
+            backgroundImage: 'url(/assets/king.gif)',
             zIndex: 20
           }}
         />

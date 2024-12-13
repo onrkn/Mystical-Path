@@ -19,7 +19,7 @@ import { useGameStore } from '../store/gameStore';
 import { generateRandomItem } from '../utils/itemGenerator';
 import { getPropertyIcon } from './PropertyIcons';
 import { cn } from '../utils/cn';
-import { playMagicShopPurchaseSound, MARKET_MUSIC, stopBackgroundMusic, playBackgroundMusic } from '../utils/soundUtils';
+import { playMagicShopPurchaseSound, stopBackgroundMusic, playBackgroundMusic, playMarketMusic, stopMarketMusic } from '../utils/soundUtils';
 
 export function Market() {
   const [items, setItems] = useState(() => Array(6).fill(null).map(() => generateRandomItem()));
@@ -31,10 +31,12 @@ export function Market() {
   // Market açıldığında müziği başlat ve tema müziğini durdur
   React.useEffect(() => {
     stopBackgroundMusic();
-    useGameStore.getState().toggleMarketMusic(true);
+    playMarketMusic();
     
     return () => {
-      useGameStore.getState().toggleMarketMusic(false);
+      // Market kapandığında müziği durdur ve tema müziğini başlat
+      stopMarketMusic();
+      setTimeout(() => playBackgroundMusic(), 100);
     };
   }, []);
 
@@ -43,9 +45,6 @@ export function Market() {
       playMagicShopPurchaseSound();
       equipItem(currentPlayer.id, item);
       setHasPurchased(true);
-
-      useGameStore.getState().toggleMarketMusic(false);
-      playBackgroundMusic();
 
       useGameStore.setState({ 
         showMarketDialog: false,
@@ -79,9 +78,6 @@ export function Market() {
       waitingForDecision: false,
       currentPlayerIndex: (currentPlayerIndex + 1) % players.length
     });
-
-    useGameStore.getState().toggleMarketMusic(false);
-    playBackgroundMusic();
 
     const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
     if (nextPlayer.isBot) {

@@ -24,13 +24,38 @@ const squareColors = {
 
 const squareIcons = {
   normal: Circle,
-  market: ShoppingBag,
-  sans: Sparkles,
-  ceza: AlertTriangle,
-  bonus: Gift,
+  market: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/shopping-bags.png)' }}
+    />
+  ),
+  sans: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/clover.png)' }}
+    />
+  ),
+  ceza: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/red-card.png)' }}
+    />
+  ),
+  bonus: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/treasure.png)' }}
+    />
+  ),
   arsa: Home,
   boss: Skull,
-  park: Trees
+  park: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/src/assets/playground.png)' }}
+    />
+  )
 };
 
 export function BoardSquare({ square, players }: BoardSquareProps) {
@@ -88,6 +113,9 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
   const renderSquareIcon = () => {
     if (square.type === 'arsa' && square.icon) {
       return square.icon;
+    }
+    if (typeof Icon === 'function') {
+      return Icon();
     }
     return <Icon className="w-6 h-6 mb-1" />;
   };

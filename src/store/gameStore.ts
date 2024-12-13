@@ -847,16 +847,6 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
   }
 };
 
-const toggleMarketMusic = (show: boolean) => {
-  if (show) {
-    // Market açılırken müziği başlat
-    MARKET_MUSIC.play();
-  } else {
-    // Market kapanırken müziği durdur
-    MARKET_MUSIC.stop();
-  }
-};
-
 const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: () => GameState) => {
   console.log('🚨 Bankruptcy Check:', { 
     playerName: player.name, 
@@ -944,7 +934,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
   handleBankruptcy: (playerId: string, rentAmount?: number, owner?: any) => handleBankruptcy(playerId, rentAmount, owner, set, get),
   payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
-  toggleMarketMusic: (show: boolean) => toggleMarketMusic(show),
   checkPlayerBankruptcy: (player: any) => checkPlayerBankruptcy(player, set, get)
 }));
 

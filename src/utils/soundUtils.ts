@@ -156,6 +156,16 @@ export const MARKET_MUSIC = new Howl({
   volume: 0.3
 });
 
+export function stopMarketMusic() {
+  MARKET_MUSIC.stop();
+}
+
+export function playMarketMusic() {
+  const soundEnabled = useGameStore.getState().settings.soundEffectsEnabled;
+  if (!soundEnabled) return;
+  MARKET_MUSIC.play();
+}
+
 export function playSoundEffect(soundName: string, volume: number = 0.5) {
   // Her ses çalma işleminden önce önbelleği temizle
   clearSoundCache();

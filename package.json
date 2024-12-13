@@ -24,6 +24,7 @@
     "@types/firebase": "^2.4.32",
     "@types/howler": "^2.2.12",
     "@types/uuid": "^10.0.0",
+    "classnames": "^2.5.1",
     "clsx": "^2.1.0",
     "firebase": "^11.0.2",
     "framer-motion": "^11.0.8",

@@ -45,6 +45,11 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         player.cardBonuses += goldReward;
         player.defeatedBosses = (player.defeatedBosses || 0) + 1; // Ejderha sayacını artır
 
+        // Oyuncular listesini güncelle
+        const updatedPlayers = players.map(p => 
+          p.id === player.id ? { ...p, defeatedBosses: player.defeatedBosses } : p
+        );
+
         // Show combat animation
         set({ 
           showCombatAnimation: { 
@@ -52,7 +57,7 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
             won: true, 
             reward: { gold: goldReward, xp: xpReward } 
           },
-          players: [...players]
+          players: updatedPlayers // Güncellenmiş oyuncular listesini kullan
         });
         setTimeout(() => set({ showCombatAnimation: { visible: false, won: true } }), 3000);
         

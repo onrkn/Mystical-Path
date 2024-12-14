@@ -12,6 +12,7 @@ import { Notification } from './components/Notification';
 import { WeatherEffect } from './components/WeatherEffect';
 import { WeatherIndicator } from './components/WeatherIndicator';
 import { CombatAnimation } from './components/CombatAnimation';
+import { SlotMachine } from './components/SlotMachine';
 import { useGameStore } from './store/gameStore';
 import { playBackgroundMusic, stopBackgroundMusic } from './utils/soundUtils';
 import { playButtonClickSound } from './utils/soundUtils';
@@ -110,7 +111,11 @@ export default function App() {
     players,
     settings,
     weather,
-    startWeatherSystem 
+    startWeatherSystem,
+    activeBoss,
+    showSlotMachine,
+    slotMachinePlayerId,
+    closeSlotMachine
   } = useGameStore();
 
   useEffect(() => {
@@ -246,7 +251,9 @@ export default function App() {
           </AnimatePresence>
 
           {showSettings && <GameSettings />}
-          {showBossDialog && <BossBattle />}
+          {showBossDialog && activeBoss && (
+            <BossBattle boss={activeBoss} />
+          )}
           {showMarketDialog && <Market />}
           {showPropertyDialog && selectedProperty && <PropertyDialog property={selectedProperty} />}
           {showAllianceDialog && (
@@ -263,6 +270,12 @@ export default function App() {
             <BankruptcyDialog
               playerName={bankruptPlayer.name}
               onClose={() => useGameStore.setState({ showBankruptcyDialog: false })}
+            />
+          )}
+          {showSlotMachine && slotMachinePlayerId && (
+            <SlotMachine
+              onClose={closeSlotMachine}
+              playerId={slotMachinePlayerId}
             />
           )}
         </main>

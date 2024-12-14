@@ -1,9 +1,10 @@
-import type { GetState, SetState } from 'zustand';
-import type { GameState, Square } from '../../types/game';
-import { sansKartlari, cezaKartlari } from '../../data/cards';
+import { GameState, GetState, SetState } from '../gameStore';
 import { calculateItemBonuses } from '../utils/itemUtils';
-import { getBotDecision } from '../../utils/botAI';
+import { getBotDecision, setBotMoving } from '../../utils/botAI';
 import { calculateStrength } from '../../utils/playerUtils';
+import { SYMBOLS } from '../../store/slotMachineStore';
+import { Square } from '../../types/game';
+import { sansKartlari, cezaKartlari } from '../../data/cards';
 
 export function advanceToNextPlayer(get: GetState<GameState>, set: SetState<GameState>) {
   const { players, currentPlayerIndex } = get();
@@ -106,7 +107,10 @@ export async function handleSquareAction(
             const rentToPay = Math.floor(square.property.rent * (1 - bonuses.rentReduction));
             
             if (player.isBot) {
+              // Bot'un kira ödemesini hemen yap
+              get().addToLog(`<span class="text-yellow-500">🏠 ${player.name}, ${owner.name}'e ${rentToPay} altın kira ödeyecek...</span>`);
               await get().payRent(player, owner, rentToPay);
+              advanceToNextPlayer(get, set);
             } else {
               set({
                 showRentDialog: true,
@@ -244,6 +248,129 @@ export async function handleSquareAction(
         // Add delay before advancing turn
         setTimeout(() => advanceToNextPlayer(get, set), 1500);
         break;
+
+      case 'slot':
+        if (player.isBot) {
+          // Bot'un parası varsa slot oynasın
+          if (player.coins >= 100) {
+            // Bot'un zar atmasını hemen engelle
+            set({ 
+              diceRolled: true,
+              waitingForDecision: true,
+              canRollDice: false,  // Yeni eklenen state
+              isBotTurnInProgress: true // Bot'un turunu işaretle
+            });
+            setBotMoving(true);
+
+            // Bot slot oynuyor mesajı
+            get().addToLog(`🎰 ${player.name} slot makinesini deniyor...`);
+            
+            // Slot sonuçlarını hesapla
+            const symbols = Array(3).fill(null).map(() => 
+              SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+            );
+            
+            // Para işlemleri
+            player.coins -= 100; // Slot ücreti
+            
+            // Jackpot katkısı
+            const jackpotContribution = 50;
+            set(state => ({
+              ...state,
+              miniJackpot: state.miniJackpot + (jackpotContribution * 0.3),
+              megaJackpot: state.megaJackpot + (jackpotContribution * 0.7)
+            }));
+
+            // Sembolleri göster
+            const symbolsDisplay = symbols.map(s => s.emoji).join(' ');
+            get().addToLog(`🎰 Sonuç: ${symbolsDisplay}`);
+
+            // Kazancı hesapla
+            const symbolIds = symbols.map(s => s.id);
+            let winAmount = 0;
+            let message = '';
+            let wonJackpot = '';
+
+            // Mega Jackpot - Üç tane 7
+            if (symbolIds.every(id => id === 'seven')) {
+              winAmount = get().megaJackpot;
+              message = `MEGA JACKPOT! ${winAmount} altın kazandı! 🎉`;
+              wonJackpot = 'mega';
+            }
+            // Mini Jackpot - Üç tane çilek
+            else if (symbolIds.every(id => id === 'cherry')) {
+              winAmount = get().miniJackpot;
+              message = `MINI JACKPOT! ${winAmount} altın kazandı! 🎉`;
+              wonJackpot = 'mini';
+            }
+            // Normal kazanç - Üç aynı sembol
+            else if (symbolIds[0] === symbolIds[1] && symbolIds[1] === symbolIds[2]) {
+              const symbolValue = symbols[0].value;
+              winAmount = 100 * symbolValue;
+              message = `3x ${symbols[0].emoji} = ${winAmount} altın kazandı!`;
+            }
+            // İki aynı sembol
+            else if (symbolIds[0] === symbolIds[1] || symbolIds[1] === symbolIds[2] || symbolIds[0] === symbolIds[2]) {
+              const symbolValue = symbols[1].value;
+              winAmount = 50 * symbolValue;
+              message = `2x ${symbols[1].emoji} = ${winAmount} altın kazandı!`;
+            }
+
+            if (winAmount > 0) {
+              player.coins += winAmount;
+              
+              // Jackpot kazanıldıysa sıfırla
+              if (wonJackpot) {
+                set(state => ({
+                  ...state,
+                  [wonJackpot + 'Jackpot']: wonJackpot === 'mini' ? 1000 : 5000
+                }));
+              }
+
+              get().addToLog(`💰 ${player.name} ${message}`);
+            } else {
+              get().addToLog(`❌ ${player.name} slot makinesinde 100 altın kaybetti!`);
+            }
+
+            // Oyuncuları güncelle
+            set({ players: [...get().players] });
+
+            // Sırayı hemen diğer oyuncuya devret
+            const nextPlayerIndex = (get().currentPlayerIndex + 1) % get().players.length;
+            set({ 
+              currentPlayerIndex: nextPlayerIndex,
+              diceRolled: false,
+              lastDiceRoll: null,
+              waitingForDecision: false,
+              canRollDice: true,  // Sıradaki oyuncu için zar atmayı etkinleştir
+              isBotTurnInProgress: false // Bot turunun bittiğini işaretle
+            });
+            setBotMoving(false);
+
+            // Eğer sıradaki oyuncu bot ise, onun turunu başlat
+            const nextPlayer = get().players[nextPlayerIndex];
+            if (nextPlayer.isBot) {
+              setTimeout(() => {
+                const gameState = get();
+                if (!gameState.diceRolled && gameState.canRollDice && !gameState.isBotTurnInProgress) {
+                  get().handleBotTurn();
+                }
+              }, 1500);
+            }
+          } else {
+            get().addToLog(`💸 ${player.name}'in slot oynamak için yeterli parası yok!`);
+            // Para yoksa hemen sırayı ilerlet
+            advanceToNextPlayer(get, set);
+          }
+          return; // Önemli: Burada return ekleyerek fonksiyondan çık
+        } else {
+          // İnsan oyuncu için slot makinesini aç
+          get().openSlotMachine(player.id);
+        }
+        break;
+
+      case 'chance':
+        // ... (diğer durumlar)
 
       default:
         advanceToNextPlayer(get, set);

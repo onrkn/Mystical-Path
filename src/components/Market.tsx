@@ -41,9 +41,14 @@ export function Market() {
     playMarketMusic();
     
     return () => {
-      // Market kapandığında müziği durdur ve tema müziğini başlat
+      // Market kapandığında müziği durdur
       stopMarketMusic();
-      setTimeout(() => playBackgroundMusic(), 100);
+      // Kısa bir gecikme ile tema müziğini başlat
+      setTimeout(() => {
+        if (!useGameStore.getState().showMarketDialog) {
+          playBackgroundMusic();
+        }
+      }, 500);
     };
   }, []);
 
@@ -80,12 +85,24 @@ export function Market() {
   };
 
   const handleClose = () => {
+    // Önce müziği durdur
+    stopMarketMusic();
+    
+    // Store'u güncelle ve sonraki oyuncuya geç
     useGameStore.setState({ 
       showMarketDialog: false,
       waitingForDecision: false,
       currentPlayerIndex: (currentPlayerIndex + 1) % players.length
     });
 
+    // Kısa bir gecikme ile tema müziğini başlat
+    setTimeout(() => {
+      if (!useGameStore.getState().showMarketDialog) {
+        playBackgroundMusic();
+      }
+    }, 500);
+
+    // Bot oyuncusu ise bot turunu başlat
     const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
     if (nextPlayer.isBot) {
       setTimeout(() => useGameStore.getState().handleBotTurn(), 1000);

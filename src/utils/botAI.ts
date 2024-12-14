@@ -2,6 +2,9 @@ import type { Player, Square, Item } from '../types/game';
 import { squares } from '../data/board';
 import { generateRandomItem } from './itemGenerator';
 
+// Bot'un mevcut durumunu takip etmek için
+let isBotMoving = false;
+
 export function getBotDecision(player: Player, square: Square): 'buy' | 'skip' {
   if (square.type !== 'arsa' || !square.property || square.property.ownerId) {
     return 'skip';
@@ -105,6 +108,14 @@ export function getBotMarketDecision(player: Player): Item | null {
   }
 
   return bestScore > 0.5 ? bestItem : null;
+}
+
+export function setBotMoving(isMoving: boolean) {
+  isBotMoving = isMoving;
+}
+
+export function isBotInAction() {
+  return isBotMoving;
 }
 
 function calculateItemScore(item: Item): number {

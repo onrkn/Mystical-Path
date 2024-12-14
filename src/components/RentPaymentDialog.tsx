@@ -22,7 +22,7 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
   const kingMultiplier = (isKingHere && settings.kingEnabled) ? 10 : 1;
   const rentAmount = Math.floor(baseRent * kingMultiplier * (1 - bonuses.rentReduction));
 
-  const handlePayRent = () => {
+  const handlePayRent = async () => {
     if (isProcessing) return;
     
     // Kirayı ödeyecek yeterli parası yoksa
@@ -41,8 +41,15 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
     }
 
     setIsProcessing(true);
-    useGameStore.getState().payRent(player, owner, rentAmount);
-    // Dialog will be closed by the payRent action
+    
+    try {
+      await payRent(player, owner, rentAmount, useGameStore.setState, useGameStore.getState);
+      // Dialog will be closed by the payRent action
+    } catch (error) {
+      console.error('Kira ödeme hatası:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Kral pozisyonundaki değişiklikleri izle

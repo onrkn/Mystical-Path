@@ -6,10 +6,17 @@ import { useGameStore } from '../store/gameStore';
 const DiceIcons = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
 
 export function DiceRoller() {
-  const { rollDice, lastDiceRoll, lastDiceRoll2, currentPlayerIndex, players } = useGameStore();
+  const { rollDice, lastDiceRoll, currentPlayerIndex, players } = useGameStore();
   const currentPlayer = players[currentPlayerIndex];
-  const DiceIcon1 = lastDiceRoll ? DiceIcons[lastDiceRoll - 1] : Dice1;
-  const DiceIcon2 = lastDiceRoll2 ? DiceIcons[lastDiceRoll2 - 1] : Dice1;
+
+  // Varsayılan olarak ilk zar ikonunu kullan
+  const DiceIcon1 = lastDiceRoll && Array.isArray(lastDiceRoll) && lastDiceRoll[0] 
+    ? DiceIcons[(lastDiceRoll[0] - 1) % 6] 
+    : DiceIcons[0];
+    
+  const DiceIcon2 = lastDiceRoll && Array.isArray(lastDiceRoll) && lastDiceRoll[1] 
+    ? DiceIcons[(lastDiceRoll[1] - 1) % 6] 
+    : DiceIcons[0];
 
   if (!currentPlayer) return null;
 
@@ -60,8 +67,8 @@ export function DiceRoller() {
         className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-3"
       >
         <div className="flex gap-2">
-          <DiceIcon1 className="w-8 h-8" />
-          <DiceIcon2 className="w-8 h-8" />
+          {DiceIcon1 && <DiceIcon1 className="w-8 h-8" />}
+          {DiceIcon2 && <DiceIcon2 className="w-8 h-8" />}
         </div>
         <span>Zar At</span>
       </button>

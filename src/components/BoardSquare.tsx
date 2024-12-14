@@ -19,7 +19,8 @@ const squareColors = {
   bonus: 'bg-green-100',
   arsa: 'bg-yellow-100',
   boss: 'bg-orange-100',
-  park: 'bg-emerald-100'
+  park: 'bg-emerald-100',
+  slot: 'bg-gray-200'
 };
 
 const squareIcons = {
@@ -60,6 +61,12 @@ const squareIcons = {
       className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
       style={{ backgroundImage: 'url(/assets/playground.png)' }}
     />
+  ),
+  slot: () => (
+    <div 
+      className="w-6 h-6 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+      style={{ backgroundImage: 'url(/slot-machine.png)' }}
+    />
   )
 };
 
@@ -69,7 +76,8 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
     currentPlayerIndex,
     kingPosition,
     weather,
-    settings
+    settings,
+    openSlotMachine
   } = useGameStore();
   const Icon = squareIcons[square.type];
   const owner = square.property?.ownerId ? allPlayers.find(p => p.id === square.property?.ownerId) : null;
@@ -125,15 +133,20 @@ export function BoardSquare({ square, players }: BoardSquareProps) {
     return <Icon className="w-6 h-6 mb-1" />;
   };
 
+  const handleSquareClick = () => {
+    // Slot makinesi için tıklama özelliği kaldırıldı
+  };
+
   return (
     <div 
       className={cn(
         squareColors[square.type],
-        'p-2 rounded-lg relative min-h-[80px] flex flex-col items-center justify-center transition-all',
+        'p-2 rounded-lg relative min-h-[80px] flex flex-col items-center justify-center transition-all cursor-pointer',
         owner && 'ring-2',
         isKingOnSquare ? 'king-highlight' : ''
       )}
       style={squareStyle}
+      onClick={handleSquareClick}
     >
       {renderSquareIcon()}
       <div className="text-xs text-center font-medium">{square.name}</div>

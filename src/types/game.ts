@@ -104,7 +104,7 @@ export interface King {
   movementInterval: number;
 }
 
-export type SquareType = 'normal' | 'arsa' | 'sans' | 'ceza' | 'market' | 'park' | 'bonus' | 'boss';
+export type SquareType = 'normal' | 'arsa' | 'sans' | 'ceza' | 'market' | 'park' | 'bonus' | 'boss' | 'slot';
 
 export interface GameSettings {
   startingMoney: number;

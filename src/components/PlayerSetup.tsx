@@ -35,10 +35,16 @@ export function PlayerSetup() {
     newTypes[index] = newTypes[index] === 'human' ? 'bot' : 'human';
     setPlayerTypes(newTypes);
     
-    // If bot, generate a bot name if empty
+    // If bot, generate a unique bot name if empty
     if (newTypes[index] === 'bot' && !playerNames[index]) {
       const newNames = [...playerNames];
-      newNames[index] = generateTurkishBotName();
+      const existingBotNames = newNames.filter((_, i) => i !== index && newTypes[i] === 'bot');
+      let botName = generateTurkishBotName();
+      // Eğer isim zaten kullanılmışsa yeni isim üret
+      while (existingBotNames.includes(botName)) {
+        botName = generateTurkishBotName();
+      }
+      newNames[index] = botName;
       setPlayerNames(newNames);
     }
   };

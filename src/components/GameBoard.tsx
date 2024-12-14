@@ -127,7 +127,18 @@ export function GameBoard() {
   const renderPlayerInfo = (player: any) => {
     const isActive = player.id === players[useGameStore.getState().currentPlayerIndex].id;
     return (
-      <div key={player.id} className={`player-info ${isActive ? 'active' : ''}`}>
+      <div 
+        key={player.id} 
+        className={`player-info ${isActive ? 'active' : ''} p-2 rounded-lg`}
+        onMouseEnter={() => {
+          if (!player.playedSlot) {
+            useGameStore.setState({ showSlotMachine: true, slotMachinePlayerId: player.id });
+          }
+        }}
+        onMouseLeave={() => {
+          useGameStore.setState({ showSlotMachine: false, slotMachinePlayerId: null });
+        }}
+      >
         <div className="flex items-center gap-2">
           <div 
             className="w-4 h-4 rounded-full" 

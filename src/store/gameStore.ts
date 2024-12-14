@@ -16,6 +16,44 @@ import { calculateRent } from './actions/propertyActions';
 import { playSoundEffect, SOUND_EFFECTS } from '../utils/soundUtils';
 import { MARKET_MUSIC } from '../utils/soundUtils';
 
+interface GameState {
+  players: Player[];
+  currentPlayerIndex: number;
+  gameStarted: boolean;
+  winner: null;
+  lastDiceRoll: number[] | null;
+  lastDiceRoll2: number | null;
+  gameMessage: string;
+  gameLog: string[];
+  alliances: any[];
+  isRolling: boolean;
+  isBotTurnInProgress: boolean;
+  showPropertyDialog: boolean;
+  showBossDialog: boolean;
+  showMarketDialog: boolean;
+  showSettings: boolean;
+  showAllianceDialog: boolean;
+  showRentDialog: boolean;
+  showBankruptcyDialog: boolean;
+  showCombatAnimation: null;
+  selectedProperty: null;
+  activeBoss: null;
+  squares: any[];
+  settings: any;
+  notifications: any[];
+  waitingForDecision: boolean;
+  isMoving: boolean;
+  rentInfo: null;
+  bankruptPlayer: null;
+  kingPosition: number;
+  weather: string;
+  showSlotMachine: boolean;
+  slotMachinePlayerId: null;
+  miniJackpot: number;
+  megaJackpot: number;
+  canRollDice: boolean;
+}
+
 const initialState: GameState = {
   players: [],
   currentPlayerIndex: 0,
@@ -27,7 +65,7 @@ const initialState: GameState = {
   gameLog: [],
   alliances: [],
   isRolling: false,
-  isBotTurnInProgress: false,  // Bayrağın başlangıç değerini false olarak ayarla
+  isBotTurnInProgress: false,
   showPropertyDialog: false,
   showBossDialog: false,
   showMarketDialog: false,
@@ -38,12 +76,12 @@ const initialState: GameState = {
   showCombatAnimation: null,
   selectedProperty: null,
   activeBoss: null,
-  squares: [], // squares'ı initial state'e ekledim
+  squares: [],
   settings: {
     ...defaultSettings,
-    musicEnabled: true,     // Varsayılan olarak müzik açık
-    soundEffectsEnabled: true,  // Varsayılan olarak ses efektleri açık
-    dragonBossWinEnabled: true, // Ejderha boss kazanma özelliği
+    musicEnabled: true,
+    soundEffectsEnabled: true,
+    dragonBossWinEnabled: true,
   },
   notifications: [],
   waitingForDecision: false,
@@ -51,7 +89,12 @@ const initialState: GameState = {
   rentInfo: null,
   bankruptPlayer: null,
   kingPosition: 0,
-  weather: 'none'
+  weather: 'none',
+  showSlotMachine: false,
+  slotMachinePlayerId: null,
+  miniJackpot: 1000,
+  megaJackpot: 5000,
+  canRollDice: true,
 };
 
 const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) => void, get: () => GameState) => {
@@ -63,30 +106,24 @@ const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) =>
 
   if (card.effect === 'property_transfer') {
     if (player.properties.length > 0) {
-      // Find player(s) with lowest strength
       const players = get().players;
       const minStrength = Math.min(...players.map(p => p.strength));
       const weakestPlayers = players.filter(p => p.strength === minStrength && p.id !== playerId);
-      
+
       if (weakestPlayers.length > 0) {
-        // Randomly select one of the weakest players
         const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
-        
-        // Randomly select a property to transfer
+
         const propertyIndex = Math.floor(Math.random() * player.properties.length);
         const property = player.properties[propertyIndex];
-        
-        // Remove property from current player
+
         player.properties = player.properties.filter((_, index) => index !== propertyIndex);
-        
-        // Add property to target player
+
         targetPlayer.properties.push(property);
 
-        // Update game state
         set(state => ({
           ...state,
-          players: state.players.map(p => 
-            p.id === player.id ? player : 
+          players: state.players.map(p =>
+            p.id === player.id ? player :
             p.id === targetPlayer.id ? targetPlayer : p
           ),
           lastAction: {
@@ -96,11 +133,10 @@ const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) =>
         }));
       }
     } else {
-      // Mülkü olmayan oyuncu için alternatif ceza
-      const penaltyCost = 200; // Mülk transferi yerine 200 altın cezası
+      const penaltyCost = 200;
       player.coins = Math.max(0, player.coins - penaltyCost);
       player.penalties += penaltyCost;
-      
+
       set(state => ({
         ...state,
         players: state.players.map(p => p.id === player.id ? player : p),
@@ -111,7 +147,6 @@ const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) =>
       }));
     }
   } else {
-    // Handle other penalty effects...
     set(state => ({
       ...state,
       lastAction: {
@@ -126,30 +161,24 @@ const handlePenaltySquare = (playerId: string, set: (state: any) => void, get: (
   const player = get().players.find(p => p.id === playerId);
   if (!player) return;
 
-  // Eğer oyuncunun mülkü varsa
   if (player.properties.length > 0) {
-    // En zayıf oyuncuyu bul
     const players = get().players;
     const minStrength = Math.min(...players.map(p => p.strength));
     const weakestPlayers = players.filter(p => p.strength === minStrength && p.id !== playerId);
-    
+
     if (weakestPlayers.length > 0) {
-      // Rastgele bir zayıf oyuncu seç
       const targetPlayer = weakestPlayers[Math.floor(Math.random() * weakestPlayers.length)];
-      
-      // Rastgele bir mülk seç
+
       const propertyIndex = Math.floor(Math.random() * player.properties.length);
       const property = player.properties[propertyIndex];
-      
-      // Mülkü transfer et
+
       player.properties = player.properties.filter((_, index) => index !== propertyIndex);
       targetPlayer.properties.push(property);
 
-      // Oyun durumunu güncelle
       set(state => ({
         ...state,
-        players: state.players.map(p => 
-          p.id === player.id ? player : 
+        players: state.players.map(p =>
+          p.id === player.id ? player :
           p.id === targetPlayer.id ? targetPlayer : p
         ),
         lastAction: {
@@ -159,11 +188,10 @@ const handlePenaltySquare = (playerId: string, set: (state: any) => void, get: (
       }));
     }
   } else {
-    // Mülkü olmayan oyuncu için para cezası
     const penaltyCost = 200;
     player.coins = Math.max(0, player.coins - penaltyCost);
     player.penalties += penaltyCost;
-    
+
     set(state => ({
       ...state,
       players: state.players.map(p => p.id === player.id ? player : p),
@@ -177,103 +205,97 @@ const handlePenaltySquare = (playerId: string, set: (state: any) => void, get: (
 
 const handleSquareEffect = (playerId: string, set: (state: any) => void, get: () => GameState) => {
   const state = get();
-  const currentPlayer = state.players.find(p => p.id === playerId);
-  if (!currentPlayer) return;
+  const { players, squares } = state;
+  const player = players.find(p => p.id === playerId);
+  if (!player) return;
 
-  const square = state.squares[currentPlayer.position];
-  
-  switch (square.type) {
-    case 'arsa':
-      if (square.property) {
-        if (!square.property.ownerId) {
-          // Satın alma seçeneği
-          set({ showBuyModal: true });
-        } else if (square.property.ownerId !== currentPlayer.id) {
-          // Kira öde
-          get().handlePropertyRent(currentPlayer, square);
-        }
-      }
-      break;
-    case 'normal':
-      // Normal kare, bir şey yapma
-      break;
-    case 'sans':
-      // Şans kartı çek
-      get().drawChanceCard(playerId);
-      break;
-    case 'ceza':
-      // Ceza karesi
-      get().handlePenaltySquare(playerId);
-      break;
-    case 'market':
-      // Market karesi
-      break;
-    case 'park':
-      // Park karesi
-      if (square.effect) {
-        currentPlayer.xp += square.effect.xp || 0;
-        set(state => ({
-          ...state,
-          players: state.players.map(p => p.id === playerId ? currentPlayer : p),
-          lastAction: {
-            type: 'park',
-            message: `${currentPlayer.name} dinlenerek ${square.effect.xp} XP kazandı!`
-          }
-        }));
-      }
-      break;
-    case 'bonus':
-      // Bonus karesi
-      if (square.effect) {
-        currentPlayer.coins += square.effect.coins || 0;
-        currentPlayer.cardBonuses += square.effect.coins || 0;
-        currentPlayer.xp += square.effect.xp || 0;
-        set(state => ({
-          ...state,
-          players: state.players.map(p => p.id === playerId ? currentPlayer : p),
-          lastAction: {
-            type: 'bonus',
-            message: `${currentPlayer.name} ${square.effect.coins} altın ve ${square.effect.xp} XP kazandı!`
-          }
-        }));
-      }
-      break;
-    case 'boss':
-      // Boss karesi
-      break;
+  const square = squares[player.position];
+  const squareType = square.type;
+
+  if (squareType === 'chance') {
+    const card = cezaKartlari[Math.floor(Math.random() * cezaKartlari.length)];
+    if (card.type === 'penalty') {
+      applyPenaltyCard(card.id, playerId, set, get);
+    } else if (card.type === 'reward') {
+      const rewardAmount = card.amount || 200;
+      player.coins += rewardAmount;
+      player.rewards += rewardAmount;
+      
+      get().addToLog(`<span class="text-green-500">🎁 ${player.name} şans kartından ${rewardAmount} altın kazandı!</span>`);
+      
+      get().showNotification({
+        title: 'Şans Kartı!',
+        message: `${card.name}: ${rewardAmount} altın kazandınız!`,
+        type: 'success'
+      });
+
+      set({
+        players: [...players],
+        waitingForDecision: false
+      });
+    }
+  } else if (squareType === 'treasure') {
+    const treasureAmount = Math.floor(Math.random() * 300) + 200;
+    player.coins += treasureAmount;
+    player.rewards += treasureAmount;
+
+    get().addToLog(`<span class="text-green-500">💎 ${player.name} hazineden ${treasureAmount} altın buldu!</span>`);
+    
+    get().showNotification({
+      title: 'Hazine Bulundu!',
+      message: `${treasureAmount} altın buldunuz!`,
+      type: 'success'
+    });
+
+    set({
+      players: [...players],
+      waitingForDecision: false
+    });
+  } else if (squareType === 'penalty') {
+    handlePenaltySquare(playerId, set, get);
+  }
+
+  const nextPlayerIndex = (state.currentPlayerIndex + 1) % players.length;
+  const nextPlayer = players[nextPlayerIndex];
+
+  set({
+    currentPlayerIndex: nextPlayerIndex,
+    isRolling: false
+  });
+
+  if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
+    setTimeout(() => get().handleBotTurn(), 1000);
   }
 };
 
 const rollDice = async (set: (state: any) => void, get: () => GameState) => {
-  // Zar atma sesi
-  if (get().settings.soundEffectsEnabled) {
-    playSoundEffect(SOUND_EFFECTS.DICE_ROLL);
-  }
+  const state = get();
+  const currentPlayer = state.players[state.currentPlayerIndex];
 
-  const { players, currentPlayerIndex, isMoving, waitingForDecision } = get();
-  const currentPlayer = players[currentPlayerIndex];
-
-  if (!currentPlayer || isMoving || waitingForDecision || currentPlayer.isBot) {
+  if (!currentPlayer || state.isMoving || state.waitingForDecision || currentPlayer.isBot || !state.canRollDice) {
     return;
   }
 
   set({ isRolling: true });
 
   try {
+    // Zar sesi çal
+    playSoundEffect(SOUND_EFFECTS.DICE_ROLL, 0.5);
+
     const roll1 = Math.floor(Math.random() * 6) + 1;
     const roll2 = Math.floor(Math.random() * 6) + 1;
     const totalRoll = roll1 + roll2;
-    
-    set({ lastDiceRoll: roll1, lastDiceRoll2: roll2 });
-    
+
+    set({ lastDiceRoll: [roll1, roll2] });
+
     get().addToLog(`<span class="text-gray-500">${currentPlayer.name} ${roll1} ve ${roll2} attı. (Toplam: ${totalRoll})</span>`);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
     await get().movePlayer(currentPlayer.id, totalRoll);
   } catch (error) {
     console.error('Error in rollDice:', error);
-    set({ 
-      currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+    set({
+      currentPlayerIndex: (state.currentPlayerIndex + 1) % state.players.length,
       waitingForDecision: false,
       isRolling: false
     });
@@ -295,31 +317,25 @@ const addToLog = (message: string, set: (state: any) => void, get: () => GameSta
 };
 
 const updateSettings = (newSettings: any, set: (state: any) => void, get: () => GameState) => {
-  // Yeni ayarları localStorage'a kaydet
   localStorage.setItem('gameSettings', JSON.stringify({
     ...get().settings,
     ...newSettings
   }));
 
-  // Mevcut oyun durumunu al
   const state = get();
   const players = [...state.players];
   const updatedSquares = state.squares.map(square => {
-    // Kopyalama yaparak orijinal veriyi değiştirmiyoruz
     const updatedSquare = { ...square };
-    
-    // Mülk varsa kira ve fiyatları güncelle
+
     if (updatedSquare.property) {
-      // Mülk fiyatını güncelle
       updatedSquare.property.price = Math.floor(
-        updatedSquare.property.baseRent * 5 * 
+        updatedSquare.property.baseRent * 5 *
         (newSettings.propertyPriceMultiplier || state.settings.propertyPriceMultiplier)
       );
 
-      // Sahibi olmayan mülklerin kirasını güncelle
       if (!updatedSquare.property.ownerId) {
         updatedSquare.property.rent = Math.floor(
-          updatedSquare.property.baseRent * 
+          updatedSquare.property.baseRent *
           (newSettings.propertyRentMultiplier || state.settings.propertyRentMultiplier)
         );
       }
@@ -328,16 +344,14 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
     return updatedSquare;
   });
 
-  // Oyuncuların mülklerinin kirasını yeniden hesapla
   const updatedPlayers = players.map(player => {
     const updatedPlayer = { ...player };
-    
-    // Her mülkün kirasını güncelle
+
     updatedPlayer.properties = updatedPlayer.properties.map(property => ({
       ...property,
       rent: Math.floor(
-        property.baseRent * 
-        (1 + (property.level - 1) * 0.2) * 
+        property.baseRent *
+        (1 + (property.level - 1) * 0.2) *
         (newSettings.propertyRentMultiplier || state.settings.propertyRentMultiplier)
       )
     }));
@@ -345,7 +359,6 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
     return updatedPlayer;
   });
 
-  // Ayarları ve güncellenmiş verileri kaydet
   set(state => ({
     ...state,
     settings: {
@@ -355,7 +368,6 @@ const updateSettings = (newSettings: any, set: (state: any) => void, get: () => 
     players: updatedPlayers
   }));
 
-  // Global squares nesnesini de güncelle
   state.squares.splice(0, state.squares.length, ...updatedSquares);
 };
 
@@ -381,8 +393,7 @@ const loadSavedSettings = () => {
 
 const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[], set: (state: any) => void, get: () => GameState) => {
   const { settings } = get();
-  
-  // Reset properties to their base state with current settings
+
   get().squares.forEach(square => {
     if (square.property) {
       square.property.price = Math.floor(square.property.baseRent * 5 * settings.propertyPriceMultiplier);
@@ -402,13 +413,13 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
     score: 0,
     level: 1,
     xp: 0,
-    strength: 1,  // Başlangıç strength değeri
+    strength: 1,
     properties: [],
     inventory: {},
     isBankrupt: false,
     isBot: playerTypes[index] === 'bot',
     defeatedBosses: 0,
-    dragonKills: 0,  // Initialize dragon kills
+    dragonKills: 0,
     startBonusCount: 0,
     rentCollected: 0,
     cardBonuses: 0,
@@ -442,42 +453,44 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
     activeBoss: null,
     waitingForDecision: false,
     isMoving: false,
-    rentInfo: null
+    rentInfo: null,
+    showSlotMachine: false,
+    slotMachinePlayerId: null
   });
 };
 
 const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
-  const { players, currentPlayerIndex } = get();
+  const state = get();
+  const { players, currentPlayerIndex } = state;
   const currentPlayer = players[currentPlayerIndex];
-  const lostGold = Math.floor(currentPlayer.coins * 0.2);
-  
-  currentPlayer.coins -= lostGold;
-  currentPlayer.penalties += lostGold;
 
-  const updatedPlayers = players.map(p => 
-    p.id === currentPlayer.id ? { ...p, ...currentPlayer } : p
-  );
-
-  set((state) => ({
-    ...state,
-    players: updatedPlayers,
+  // Dialog'u kapat
+  set({
     showBossDialog: false,
     activeBoss: null,
-    waitingForDecision: false,
-    currentPlayerIndex: (currentPlayerIndex + 1) % players.length
-  }));
-
-  get().showNotification({
-    title: 'Kaçış Başarılı',
-    message: `${currentPlayer.name} savaştan kaçtı ve ${lostGold} altın kaybetti!`,
-    type: 'warning'
+    waitingForDecision: false
   });
-  
-  get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} savaştan kaçtı! (-${lostGold} altın)</span>`);
 
-  // If next player is bot and no dialogs are open, trigger bot turn
-  const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-  if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {
+  // Log mesajı ekle
+  get().addToLog(`🏃‍♂️ ${currentPlayer.name} ejderhadan kaçtı!`);
+
+  // Bildirim göster
+  get().showNotification({
+    title: 'Kaçış Başarılı!',
+    message: `${currentPlayer.name} ejderhadan kaçmayı başardı!`,
+    type: 'info'
+  });
+
+  // Sırayı diğer oyuncuya geçir
+  const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  const nextPlayer = players[nextPlayerIndex];
+
+  set({
+    currentPlayerIndex: nextPlayerIndex,
+    isRolling: false
+  });
+
+  if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
     setTimeout(() => get().handleBotTurn(), 1000);
   }
 };
@@ -488,34 +501,29 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
   const state = get();
   const { players, currentPlayerIndex } = state;
 
-  // Mülk sahibini bul
   const propertyOwner = players.find(p => p.id === square.property.ownerId);
-  
+
   if (!propertyOwner || propertyOwner.id === currentPlayer.id) return;
 
-  // Kira miktarını hesapla
   const rentAmount = calculateRent(square.property, get);
 
-  console.log('Property Rent Debug:', { 
-    currentPlayer: currentPlayer.name, 
-    owner: propertyOwner.name, 
-    rentAmount 
+  console.log('Property Rent Debug:', {
+    currentPlayer: currentPlayer.name,
+    owner: propertyOwner.name,
+    rentAmount
   });
 
-  // Kira bilgisini kaydet
-  set({ 
-    rentInfo: { 
-      player: currentPlayer, 
-      owner: propertyOwner, 
-      amount: rentAmount 
+  set({
+    rentInfo: {
+      player: currentPlayer,
+      owner: propertyOwner,
+      amount: rentAmount
     },
-    showRentDialog: true 
+    showRentDialog: true
   });
 
-  // Kirayı öde
   payRent(currentPlayer, propertyOwner, rentAmount, set, get);
 
-  // Sırayı ilerlet
   set({
     currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
     showRentDialog: false,
@@ -523,7 +531,6 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
     waitingForDecision: false
   });
 
-  // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
   if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
     setTimeout(() => get().handleBotTurn(), 1500);
@@ -532,18 +539,14 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
 
 const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
   const { players, kingPosition } = get();
-  
-  // Kral pozisyonunu güncelle
+
   set({ kingPosition: position });
-  
-  // Tüm oyuncuların mülklerinin kiralarını yeniden hesapla
+
   players.forEach(player => {
     player.properties.forEach(property => {
-      // Eğer bu mülk şu anki kral pozisyonunda değilse, normal kira değerini kullan
       if (property.id !== position) {
         property.rent = calculateRent(property, get);
       } else {
-        // Kral bu mülkteyse kira 10 katına çıkar
         if (get().settings.kingEnabled) {
           property.rent = calculateRent(property, get) * 10;
         }
@@ -551,25 +554,22 @@ const updateKingPosition = (position: number, set: (state: any) => void, get: ()
     });
   });
 
-  // Oyuncuları güncelle
   set({ players: [...players] });
 };
 
 const updateWeather = (weather: GameState['weather'], set: (state: any) => void, get: () => GameState) => {
-  // Hava durumu ayarı kapalıysa hiçbir şey yapma
   if (!get().settings.weatherEnabled) return;
 
   const { players } = get();
   set({ weather });
-  
-  // Tüm mülklerin kiralarını güncelle
+
   players.forEach(player => {
     player.properties?.forEach(property => {
       property.rent = calculateRent(property, get);
     });
   });
   set({ players: [...players] });
-  
+
   if (weather === 'rain') {
     get().addToLog(`<span class="text-blue-500">Yağmur başladı! Tüm kiralar %50 düşük.</span>`);
     get().showNotification({
@@ -587,40 +587,33 @@ const updateWeather = (weather: GameState['weather'], set: (state: any) => void,
   }
 };
 
-// Weather system constants
-const WEATHER_CHANGE_INTERVAL = 2 * 60 * 1000; // 2 dakika
-const RAIN_DURATION = 30 * 1000; // 30 saniye
-const RAIN_COOLDOWN = 2 * 60 * 1000; // 2 dakika
+const WEATHER_CHANGE_INTERVAL = 2 * 60 * 1000;
+const RAIN_DURATION = 30 * 1000;
+const RAIN_COOLDOWN = 2 * 60 * 1000;
 
 let weatherTimeout: NodeJS.Timeout | null = null;
 let rainCooldownTimeout: NodeJS.Timeout | null = null;
 
 const startWeatherSystem = (set: (state: any) => void, get: () => GameState) => {
-  // Hava durumu ayarı kapalıysa başlatma
   if (!get().settings.weatherEnabled) return;
 
   const changeWeather = () => {
-    // Hava durumu ayarı hala açıksa devam et
     if (!get().settings.weatherEnabled) {
       stopWeatherSystem();
       return;
     }
 
-    // Yağmur için cooldown kontrolü
     if (get().weather === 'none') {
       updateWeather('rain', set, get);
-      
-      // Yağmuru 30 saniye sonra durdur
+
       rainCooldownTimeout = setTimeout(() => {
         updateWeather('none', set, get);
-        
-        // Sonraki hava değişimi için zamanlayıcı
+
         weatherTimeout = setTimeout(changeWeather, WEATHER_CHANGE_INTERVAL);
       }, RAIN_DURATION);
     }
   };
 
-  // İlk hava değişimi zamanlayıcısını kur
   weatherTimeout = setTimeout(changeWeather, WEATHER_CHANGE_INTERVAL);
 };
 
@@ -635,9 +628,7 @@ const stopWeatherSystem = () => {
   }
 };
 
-// Oyun başladığında ve ayarlar değiştiğinde weather sistemini kontrol et
 const initializeWeatherSystem = (set: (state: any) => void, get: () => GameState) => {
-  // Hava durumu ayarı açıksa sistemi başlat
   if (get().settings.weatherEnabled) {
     startWeatherSystem(set, get);
   }
@@ -648,15 +639,14 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
   const gameSet = set || useGameStore.setState;
   const state = gameGet();
   const { players, squares } = state;
-  
-  console.log('🚨 Bankruptcy Handler:', { 
-    playerId, 
-    players: players.length, 
+
+  console.log('🚨 Bankruptcy Handler:', {
+    playerId,
+    players: players.length,
     squares: squares ? (Array.isArray(squares) ? squares.length : 'NOT AN ARRAY') : 'UNDEFINED',
     currentPlayerIndex: state.currentPlayerIndex
   });
 
-  // İflas eden oyuncuyu bul
   const bankruptPlayer = players.find(p => p.id === playerId);
   if (!bankruptPlayer) {
     console.error('❌ Bankruptcy: Player not found!', { playerId, players });
@@ -671,44 +661,35 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
     owner
   });
 
-  // Mülk sahibini bul (son kirayı ödemek zorunda kaldığı oyuncu)
   const rentOwner = owner || state.rentInfo?.owner;
 
-  // Oyuncunun tüm mülklerini tespit et ve güncelle
-  const playerProperties = squares.filter((square: any) => 
+  const playerProperties = squares.filter((square: any) =>
     square.property && square.property.ownerId === playerId
   );
 
-  // Her bir mülkü sahipsiz bırak ve tekrar satışa çıkar
   playerProperties.forEach((square: any) => {
     if (square.property) {
-      // Mülkün özelliklerini sıfırla
       square.property.ownerId = null;
       square.property.level = 1;
       square.property.rent = square.property.baseRent;
       square.property.upgradePrice = Math.floor(square.property.baseRent * 1.5);
-      
-      // Log mesajı ekle
+
       gameGet().addToLog(`<span class="text-blue-500">🏘️ ${square.property.name} açık artırmada!</span>`);
     }
   });
 
-  // Oyuncunun kendi property listesini de temizle
   bankruptPlayer.properties = [];
 
-  // Alacaklıya kalan parayı aktar
   if (rentOwner && bankruptPlayer.coins > 0) {
     const transferAmount = bankruptPlayer.coins;
     rentOwner.coins += transferAmount;
     rentOwner.rentCollected += transferAmount;
-    
+
     gameGet().addToLog(`<span class="text-green-500">💰 ${rentOwner.name}, ${bankruptPlayer.name}'den ${transferAmount} altın aldı!</span>`);
   }
 
-  // Oyuncunun parasını sıfırla
   bankruptPlayer.coins = 0;
 
-  // İflas bildirimi
   gameGet().showNotification({
     title: 'İFLAS!',
     message: `${bankruptPlayer.name} iflas etti ve oyundan elendi!`,
@@ -717,7 +698,6 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
 
   gameGet().addToLog(`<span class="text-red-500">💥 ${bankruptPlayer.name} iflas etti!</span>`);
 
-  // Oyuncuyu oyun listesinden çıkar
   const updatedPlayers = players.filter((p: Player) => p.id !== playerId);
 
   console.log('🏁 Post Bankruptcy:', {
@@ -725,7 +705,6 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
     currentPlayerIndex: state.currentPlayerIndex
   });
 
-  // Eğer son kalan oyuncu ise oyunu bitir
   if (updatedPlayers.length === 1) {
     const winner = updatedPlayers[0];
     gameSet({ 
@@ -734,28 +713,25 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
       gameMessage: `${winner.name} oyunu kazandı!`,
       gameStarted: false
     });
-    
-    // Kazanan için bildirim ve log
+
     gameGet().showNotification({
       title: 'Oyun Bitti!',
       message: `${winner.name} oyunu kazandı!`,
       type: 'success'
     });
     gameGet().addToLog(`<span class="text-green-500">🏆 ${winner.name} oyunu kazandı!</span>`);
-    
+
     return;
   }
 
-  // Mevcut oyuncu indexini güncelle
   let newCurrentPlayerIndex = state.currentPlayerIndex;
   if (newCurrentPlayerIndex >= updatedPlayers.length) {
     newCurrentPlayerIndex = 0;
   }
 
-  // Oyun durumunu güncelle
   gameSet({
     players: updatedPlayers,
-    squares: [...squares], // Güncel kare bilgileri
+    squares: [...squares],
     currentPlayerIndex: newCurrentPlayerIndex,
     gameMessage: `${bankruptPlayer.name} oyundan elendi!`,
     showRentDialog: false,
@@ -764,7 +740,6 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
     isRolling: false
   });
 
-  // İflas eden oyuncu için bildirim ve log
   gameGet().showNotification({
     title: 'İFLAS!',
     message: `${bankruptPlayer.name} oyundan elendi!`,
@@ -772,7 +747,6 @@ const handleBankruptcy = (playerId: string, rentAmount?: number, owner?: any, se
   });
   gameGet().addToLog(`<span class="text-red-500">🏴 ${bankruptPlayer.name} oyundan elendi!</span>`);
 
-  // Sonraki oyuncu bir bot ise bot turunu başlat
   const nextPlayer = updatedPlayers[newCurrentPlayerIndex];
   if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
     setTimeout(() => gameGet().handleBotTurn(), 1500);
@@ -783,29 +757,22 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
   const state = get();
   const { players } = state;
 
-  console.log('PayRent Debug:', { 
-    player: player.name, 
-    owner: owner.name, 
-    rentAmount, 
-    playerCoins: player.coins 
+  console.log('PayRent Debug:', {
+    player: player.name,
+    owner: owner.name,
+    rentAmount,
+    playerCoins: player.coins
   });
 
-  // Oyuncunun kirayı ödeyecek yeterli parası yoksa
   if (player.coins < rentAmount) {
-    // Oyuncunun toplam parasını aktar
     const transferAmount = player.coins;
-    
-    // Parayı mülk sahibine aktar
+
     owner.coins += transferAmount;
     owner.rentCollected += transferAmount;
-    
-    // Log mesajları ekle
-    get().addToLog(`<span class="text-red-500">💸 Insufficient Funds: ${player.name}, kirayı ödeyemedi!</span>`);
+
     get().addToLog(`<span class="text-green-500">💰 ${owner.name}, ${player.name}'den ${transferAmount} altın aldı!</span>`);
-    
-    // Oyuncunun mülklerini boşa düşür
+
     player.properties.forEach(prop => {
-      // Mülkün sahibini sıfırla
       const squareIndex = state.squares.findIndex(sq => sq.property?.id === prop.id);
       if (squareIndex !== -1 && state.squares[squareIndex].property) {
         state.squares[squareIndex].property.ownerId = null;
@@ -813,52 +780,19 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
         state.squares[squareIndex].property.rent = state.squares[squareIndex].property.baseRent;
       }
     });
-    
-    // İflas mekanizmasını çağır
-    get().handleBankruptcy(player.id, rentAmount, owner, set, get);
-    
-    // Bildirim göster
+
+    handleBankruptcy(player.id, rentAmount, owner, set, get);
+
     get().showNotification({
       title: 'İFLAS!',
       message: `${player.name} kirayı ödeyemedi ve oyundan elendi!`,
       type: 'error'
     });
 
-    // Sonraki oyuncunun bot olup olmadığını kontrol et
     const currentPlayerIndex = state.currentPlayerIndex;
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
     const nextPlayer = players[nextPlayerIndex];
 
-    // Oyun durumunu güncelle
-    set({
-      players: [...players],
-      currentPlayerIndex: nextPlayerIndex,
-      showRentDialog: false,
-      rentInfo: null,
-      waitingForDecision: false,
-      isRolling: false
-    });
-
-    // Sonraki oyuncu bir bot ise bot turunu başlat
-    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-      setTimeout(() => get().handleBotTurn(), 1500);
-    }
-  } else {
-    // Yeterli para varsa kirayı öde
-    player.coins -= rentAmount;
-    player.rentPaid += rentAmount;
-    owner.coins += rentAmount;
-    owner.rentCollected += rentAmount;
-
-    // Log mesajları ekle
-    get().addToLog(`<span class="text-green-500">💰 ${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
-
-    // Sonraki oyuncunun bot olup olmadığını kontrol et
-    const currentPlayerIndex = state.currentPlayerIndex;
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayer = players[nextPlayerIndex];
-
-    // Oyun durumunu güncelle
     set({
       players: [...players],
       currentPlayerIndex: nextPlayerIndex,
@@ -867,7 +801,35 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
       waitingForDecision: false
     });
 
-    // Sonraki oyuncu bir bot ise bot turunu başlat
+    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
+      setTimeout(() => get().handleBotTurn(), 1500);
+    }
+  } else {
+    player.coins -= rentAmount;
+    player.rentPaid += rentAmount;
+    owner.coins += rentAmount;
+    owner.rentCollected += rentAmount;
+
+    get().addToLog(`<span class="text-green-500">💰 ${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!</span>`);
+
+    get().showNotification({
+      title: 'Kira Ödendi!',
+      message: `${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!`,
+      type: 'success'
+    });
+
+    const currentPlayerIndex = state.currentPlayerIndex;
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayer = players[nextPlayerIndex];
+
+    set({
+      players: [...players],
+      currentPlayerIndex: nextPlayerIndex,
+      showRentDialog: false,
+      rentInfo: null,
+      waitingForDecision: false
+    });
+
     if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
       setTimeout(() => get().handleBotTurn(), 1500);
     }
@@ -875,13 +837,12 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
 };
 
 const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: () => GameState) => {
-  console.log('🚨 Bankruptcy Check:', { 
-    playerName: player.name, 
+  console.log('🚨 Bankruptcy Check:', {
+    playerName: player.name,
     coins: player.coins,
-    isBankrupt: player.isBankrupt 
+    isBankrupt: player.isBankrupt
   });
 
-  // Oyuncunun parası 0 veya 0'ın altındaysa iflas et
   if (player.coins <= 0 && !player.isBankrupt) {
     const gameGet = get || useGameStore.getState;
     const gameSet = set || useGameStore.setState;
@@ -889,14 +850,13 @@ const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: ()
     console.log('🏴 Triggering Bankruptcy for:', player.name);
 
     gameGet().addToLog(`<span class="text-red-600">💥 ${player.name} iflas etti! Parası ${player.coins} altına düştü.</span>`);
-    
+
     gameGet().showNotification({
       title: 'İFLAS!',
       message: `${player.name} iflas etti. Parası ${player.coins} altına düştü.`,
       type: 'error'
     });
 
-    // İflas mekanizmasını çağır
     gameGet().handleBankruptcy(player.id, gameSet, gameGet);
   }
 };
@@ -905,17 +865,14 @@ const handlePropertyPurchase = (playerId: string, propertyId: string, set: (stat
   const state = get();
   const { players, squares } = state;
 
-  // Oyuncuyu bul
   const player = players.find(p => p.id === playerId);
   if (!player) return;
 
-  // Mülkü bul
   const squareIndex = squares.findIndex(sq => sq.property?.id === propertyId);
   if (squareIndex === -1 || !squares[squareIndex].property) return;
 
   const property = squares[squareIndex].property;
 
-  // Mülk fiyatını kontrol et
   if (player.coins < property.price) {
     get().showNotification({
       title: 'Yetersiz Bakiye!',
@@ -925,21 +882,17 @@ const handlePropertyPurchase = (playerId: string, propertyId: string, set: (stat
     return;
   }
 
-  // Mülkü satın al
   player.coins -= property.price;
   player.propertyPurchases += property.price;
   player.properties.push(property);
 
-  // Mülkün sahibini güncelle
   property.ownerId = playerId;
 
-  // Oyun durumunu güncelle
   set({
     players: [...players],
     squares: [...squares]
   });
 
-  // Bildirim göster
   get().showNotification({
     title: 'Mülk Satın Alındı!',
     message: `${property.name} mülkü satın alındı!`,
@@ -956,11 +909,9 @@ const purchaseItem = (playerId: string, item: any, set: (state: any) => void, ge
   const state = get();
   const { players } = state;
 
-  // Oyuncuyu bul
   const player = players.find(p => p.id === playerId);
   if (!player) return;
 
-  // Item fiyatını kontrol et
   if (player.coins < item.price) {
     get().showNotification({
       title: 'Yetersiz Bakiye!',
@@ -970,17 +921,14 @@ const purchaseItem = (playerId: string, item: any, set: (state: any) => void, ge
     return;
   }
 
-  // Itemi satın al
   player.coins -= item.price;
   player.itemPurchases += item.price;
   player.inventory[item.name] = (player.inventory[item.name] || 0) + 1;
 
-  // Oyun durumunu güncelle
   set({
     players: [...players]
   });
 
-  // Bildirim göster
   get().showNotification({
     title: 'Item Satın Alındı!',
     message: `${item.name} itemi satın alındı!`,
@@ -992,31 +940,65 @@ const sellItem = (playerId: string, slotName: string, set: (state: any) => void,
   const state = get();
   const { players } = state;
 
-  // Oyuncuyu bul
   const player = players.find(p => p.id === playerId);
   if (!player) return;
 
-  // Itemi bul
   const item = player.inventory[slotName];
   if (!item) return;
 
-  // Itemi sat
   const sellPrice = Math.floor(item.price * 0.5);
   player.coins += sellPrice;
   player.itemSales += sellPrice;
   player.inventory[slotName] -= 1;
 
-  // Oyun durumunu güncelle
   set({
     players: [...players]
   });
 
-  // Bildirim göster
   get().showNotification({
     title: 'Item Satıldı!',
     message: `${slotName} itemi satıldı!`,
     type: 'success'
   });
+};
+
+const openSlotMachine = (playerId: string, set: (state: any) => void, get: () => GameState) => {
+  const { players } = get();
+  const player = players.find(p => p.id === playerId);
+  if (player) {
+    set({ players: [...players], showSlotMachine: true, slotMachinePlayerId: playerId });
+  }
+};
+
+const closeSlotMachine = (set: (state: any) => void, get: () => GameState) => {
+  const { currentPlayerIndex, players } = get();
+
+  set({
+    showSlotMachine: false,
+    slotMachinePlayerId: null,
+    waitingForDecision: false,
+    currentPlayerIndex: (currentPlayerIndex + 1) % players.length
+  });
+
+  const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
+  if (nextPlayer?.isBot) {
+    setTimeout(() => get().handleBotTurn(), 1000);
+  }
+};
+
+const updateJackpots = (contribution: number, set: (state: any) => void) => {
+  set(state => ({
+    ...state,
+    miniJackpot: state.miniJackpot + (contribution * 0.3),
+    megaJackpot: state.megaJackpot + (contribution * 0.7)
+  }));
+};
+
+const resetJackpot = (type: 'mini' | 'mega', set: (state: any) => void) => {
+  set(state => ({
+    ...state,
+    [type + 'Jackpot']: type === 'mini' ? 1000 : 5000
+  }));
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -1027,10 +1009,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   ...handleAllianceActions(set, get),
   ...handleBotActions(set, get),
   ...handleCombatActions(set, get),
-  
+
   calculateItemBonuses,
   getBotMarketDecision,
-  
+
   movePlayer: (playerId: string, steps: number) => movePlayer(get, set, playerId, steps),
 
   rollDice: () => rollDice(set, get),
@@ -1066,7 +1048,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   handlePropertyPurchase: (playerId: string, propertyId: string) => handlePropertyPurchase(playerId, propertyId, set, get),
   upgradeProperty: (propertyId: string) => upgradeProperty(propertyId, set, get),
   purchaseItem: (playerId: string, item: any) => purchaseItem(playerId, item, set, get),
-  sellItem: (playerId: string, slotName: string) => sellItem(playerId, slotName, set, get)
+  sellItem: (playerId: string, slotName: string) => sellItem(playerId, slotName, set, get),
+  openSlotMachine: (playerId: string) => openSlotMachine(playerId, set, get),
+  closeSlotMachine: () => closeSlotMachine(set, get),
+  updateJackpots: (contribution: number) => updateJackpots(contribution, set),
+  resetJackpot: (type: 'mini' | 'mega') => resetJackpot(type, set)
 }));
 
 export default useGameStore;

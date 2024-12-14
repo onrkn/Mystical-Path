@@ -41,7 +41,7 @@ export const squares: Square[] = [
     icon: getPropertyIcon('Kristal Mağara'),
     property: { id: 2, name: 'Kristal Mağara', price: 120, rent: 25, level: 1, upgradePrice: 50, ownerId: null, baseRent: 25 }
   },
-  { id: 4, type: 'market', name: 'Sihirli Dükkan', description: 'Eşya satın al' },
+  { id: 4, type: 'slot', name: 'Slot Makinesi', description: '100 altın karşılığında şansını dene!', icon: '/slot-machine.png' },
   { 
     id: 5, 
     type: 'arsa', 

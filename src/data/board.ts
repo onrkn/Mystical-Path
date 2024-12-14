@@ -5,7 +5,7 @@ const boss: Boss = {
   id: 'dragon-1',
   name: 'Kadim Ejderha',
   type: 'dragon',
-  strength: 1,
+  strength: 5,
   rewards: {
     gold: 500,
     xp: 200,

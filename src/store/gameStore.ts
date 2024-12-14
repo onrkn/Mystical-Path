@@ -449,24 +449,34 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
 const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
   const { players, currentPlayerIndex } = get();
   const currentPlayer = players[currentPlayerIndex];
-
-  if (!currentPlayer) return;
-
-  get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} ejderhayla savaşmaktan kaçındı!</span>`);
+  const lostGold = Math.floor(currentPlayer.coins * 0.2);
   
-  set({
+  currentPlayer.coins -= lostGold;
+  currentPlayer.penalties += lostGold;
+
+  const updatedPlayers = players.map(p => 
+    p.id === currentPlayer.id ? { ...p, ...currentPlayer } : p
+  );
+
+  set((state) => ({
+    ...state,
+    players: updatedPlayers,
     showBossDialog: false,
     activeBoss: null,
     waitingForDecision: false,
-    isRolling: false
+    currentPlayerIndex: (currentPlayerIndex + 1) % players.length
+  }));
+
+  get().showNotification({
+    title: 'Kaçış Başarılı',
+    message: `${currentPlayer.name} savaştan kaçtı ve ${lostGold} altın kaybetti!`,
+    type: 'warning'
   });
+  
+  get().addToLog(`<span class="text-yellow-500">${currentPlayer.name} savaştan kaçtı! (-${lostGold} altın)</span>`);
 
-  // Sıradaki oyuncuya geç
-  const nextIndex = (currentPlayerIndex + 1) % players.length;
-  set({ currentPlayerIndex: nextIndex });
-
-  // Eğer sıradaki oyuncu bot ise ve açık dialog yoksa, bot turunu başlat
-  const nextPlayer = players[nextIndex];
+  // If next player is bot and no dialogs are open, trigger bot turn
+  const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
   if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {
     setTimeout(() => get().handleBotTurn(), 1000);
   }

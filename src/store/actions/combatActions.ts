@@ -25,11 +25,16 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
     }
 
     const playerStrength = calculateStrength(player);
-    const winChance = Math.min(Math.max((playerStrength / (playerStrength + activeBoss.strength)) * 100, 10), 90);
+    
+    // Kazanma şansı hesaplama
+    // Oyuncu gücü 5, boss gücü 5 ise şans %50
+    // Oyuncu gücü 3, boss gücü 5 ise şans %37.5
+    // Oyuncu gücü 1, boss gücü 5 ise şans %16.7
+    const winChance = Math.min(Math.max((playerStrength / (playerStrength + activeBoss.strength)) * 100 * 0.8, 5), 80);
     
     console.log('Oyuncu gücü:', playerStrength);
     console.log('Boss gücü:', activeBoss.strength);
-    console.log('Kazanma şansı:', winChance);
+    console.log('Kazanma şansı:', winChance.toFixed(1) + '%');
     
     const won = Math.random() * 100 < winChance;
     
@@ -85,12 +90,18 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
             reward: { gold: goldReward, xp: xpReward } 
           },
           players: updatedPlayers,
-          showBossDialog: false,
+          showBossDialog: false,  // Boss penceresini kapat
           activeBoss: null,
           waitingForDecision: false,
           currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
         }));
-        setTimeout(() => set({ showCombatAnimation: { visible: false, won: true } }), 3000);
+
+        setTimeout(() => {
+          set((state) => ({
+            ...state,
+            showCombatAnimation: { visible: false, won: true }
+          }));
+        }, 3000);
         
         if (activeBoss.rewards.item) {
           const item = generateRandomItem('legendary');
@@ -113,9 +124,28 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         player.coins -= lostGold;
         player.penalties += lostGold;
 
-        // Show combat animation
-        set({ showCombatAnimation: { visible: true, won: false } });
-        setTimeout(() => set({ showCombatAnimation: { visible: false, won: false } }), 3000);
+        // Oyuncular listesini güncelle
+        const updatedPlayers = players.map(p => 
+          p.id === player.id ? { ...p, ...player } : p
+        );
+
+        // Show combat animation ve state güncelleme
+        set((state) => ({ 
+          ...state,
+          showCombatAnimation: { visible: true, won: false },
+          players: updatedPlayers,
+          showBossDialog: false,
+          activeBoss: null,
+          waitingForDecision: false,
+          currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+        }));
+
+        setTimeout(() => {
+          set((state) => ({
+            ...state,
+            showCombatAnimation: { visible: false, won: false }
+          }));
+        }, 3000);
         
         get().showNotification({
           title: 'Boss Savaşı Kaybedildi',

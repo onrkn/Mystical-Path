@@ -37,47 +37,47 @@ function loadAndPlaySound(soundPath: string, volume: number = 0.5): void {
 
   console.log('Ses çalınmaya çalışılıyor:', soundPath);
 
-  // Ses efekti zaten yüklüyse, direkt çal
-  if (soundCache[soundPath]) {
-    try {
-      // Önce mevcut sesi durdur ve kaldır
-      soundCache[soundPath].stop();
-      soundCache[soundPath].unload();
-      delete soundCache[soundPath];
-    } catch (error) {
-      console.error('Önbellek temizleme hatası:', error);
-    }
-  }
-
-  // Yeni ses efekti oluştur
   try {
+    // Ses efekti zaten yüklüyse ve çalışıyorsa, tekrar kullan
+    if (soundCache[soundPath] && soundCache[soundPath].state() === 'loaded') {
+      soundCache[soundPath].volume(volume);
+      soundCache[soundPath].play();
+      return;
+    }
+
+    // Yeni ses efekti oluştur
     const sound = new Howl({
       src: [soundPath],
-      html5: true, // HTML5 Audio kullan
+      html5: true,
       volume: volume,
-      preload: true, // Otomatik preload
+      preload: true,
+      format: ['mp3'],
+      pool: 5,
       onload: () => {
-        console.log('Ses başarıyla yüklendi');
+        console.log('Ses başarıyla yüklendi:', soundPath);
         sound.play();
       },
       onloaderror: (id, err) => {
         console.error('Ses yükleme hatası:', err);
-        console.error('Ses yolu:', soundPath);
+        // Hata durumunda önbellekten kaldır
+        delete soundCache[soundPath];
       },
-      onplayerror: (id, err) => {
-        console.error('Ses çalma hatası:', err);
-        sound.unload(); // Hata durumunda sesi kaldır
+      onplayerror: () => {
+        console.error('Ses çalma hatası');
+        sound.once('unlock', () => {
+          sound.play();
+        });
       },
       onend: () => {
-        console.log('Ses çalma tamamlandı');
-        sound.unload(); // Çalma bitince sesi kaldır
+        // Ses bittiğinde önbellekten kaldırma, tekrar kullanılabilir
+        console.log('Ses çalma tamamlandı:', soundPath);
       }
     });
 
     // Cache'e ekle
     soundCache[soundPath] = sound;
   } catch (error) {
-    console.error('Ses oluşturma hatası:', error);
+    console.error('Ses işleme hatası:', error);
   }
 }
 
@@ -153,7 +153,12 @@ export const MARKET_MUSIC = new Howl({
   src: ['/sounds/market-music.mp3'],
   html5: true,
   loop: true,
-  volume: 0.3
+  volume: 0.3,
+  preload: true,
+  format: ['mp3'],
+  onloaderror: (id, err) => {
+    console.error('Market müziği yükleme hatası:', err);
+  }
 });
 
 export function stopMarketMusic() {

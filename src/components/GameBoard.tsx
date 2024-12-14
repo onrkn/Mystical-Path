@@ -242,7 +242,7 @@ export function GameBoard() {
                                 textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                               }}
                             >
-                              {player.dragonKills || 0}/3
+                              {player.dragonKills}/3
                             </span>
                           </div>
                         ))}

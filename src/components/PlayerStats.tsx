@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Coins, Star, Building2, TrendingUp, BarChart2, Swords, ChevronDown, ChevronUp } from 'lucide-react';
+import { Coins, Star, Building2, TrendingUp, BarChart2, Swords, Shield, Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { PlayerStatsModal } from './PlayerStatsModal';
 import { calculateStrength } from '../utils/playerUtils';

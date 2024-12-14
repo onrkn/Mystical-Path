@@ -126,4 +126,16 @@ export type Square = {
   icon?: React.ReactNode;
 };
 
+export interface Boss {
+  id: string;
+  name: string;
+  type: 'dragon' | 'other';
+  strength: number;
+  rewards: {
+    gold: number;
+    xp: number;
+    item: boolean;
+  };
+}
+
 // Rest of the types remain the same...

@@ -99,6 +99,7 @@ const applyPenaltyCard = (cardId: string, playerId: string, set: (state: any) =>
       // Mülkü olmayan oyuncu için alternatif ceza
       const penaltyCost = 200; // Mülk transferi yerine 200 altın cezası
       player.coins = Math.max(0, player.coins - penaltyCost);
+      player.penalties += penaltyCost;
       
       set(state => ({
         ...state,
@@ -161,6 +162,7 @@ const handlePenaltySquare = (playerId: string, set: (state: any) => void, get: (
     // Mülkü olmayan oyuncu için para cezası
     const penaltyCost = 200;
     player.coins = Math.max(0, player.coins - penaltyCost);
+    player.penalties += penaltyCost;
     
     set(state => ({
       ...state,
@@ -224,6 +226,7 @@ const handleSquareEffect = (playerId: string, set: (state: any) => void, get: ()
       // Bonus karesi
       if (square.effect) {
         currentPlayer.coins += square.effect.coins || 0;
+        currentPlayer.cardBonuses += square.effect.coins || 0;
         currentPlayer.xp += square.effect.xp || 0;
         set(state => ({
           ...state,
@@ -390,44 +393,57 @@ const initializeGame = (playerNames: string[], playerTypes: ('human' | 'bot')[],
   });
 
   const initialPlayers = playerNames.map((name, index) => ({
-    id: `player-${index + 1}`,
+    id: index.toString(),
     name,
-    isBot: playerTypes[index] === 'bot',
+    type: playerTypes[index],
     color: generatePlayerColor(index),
     position: 0,
     coins: get().settings.startingMoney,
     score: 0,
     level: 1,
     xp: 0,
-    strength: 1,  // 10'dan 1'e düşürüldü
-    dragonKills: 0,  // Başlangıçta ejderha öldürme sayısı 0
+    strength: 1,  // Başlangıç strength değeri
     properties: [],
     inventory: {},
-    inJail: false,
-    jailTurns: 0,
-    isKing: false,
     isBankrupt: false,
-    lastRoll: null,
-    lastRoll2: null,
-    canRoll: true,
-    canMove: true,
+    isBot: playerTypes[index] === 'bot',
+    defeatedBosses: 0,
+    dragonKills: 0,  // Initialize dragon kills
+    startBonusCount: 0,
+    rentCollected: 0,
+    cardBonuses: 0,
+    itemSales: 0,
+    propertyPurchases: 0,
+    propertyUpgrades: 0,
+    rentPaid: 0,
+    itemPurchases: 0,
+    penalties: 0,
     canBuy: true,
     canTrade: true,
-    canUseItems: true,
+    canUseItems: true
   }));
 
   set({
     players: initialPlayers,
-    gameStarted: true,
     currentPlayerIndex: 0,
-    gameLog: ['Oyun başladı!'],
+    gameStarted: true,
+    winner: null,
+    gameMessage: '',
+    gameLog: [],
+    squares: squares,
+    showPropertyDialog: false,
+    showBossDialog: false,
+    showMarketDialog: false,
+    showSettings: false,
+    showAllianceDialog: false,
+    showRentDialog: false,
+    showBankruptcyDialog: false,
+    selectedProperty: null,
+    activeBoss: null,
     waitingForDecision: false,
-    isRolling: false
+    isMoving: false,
+    rentInfo: null
   });
-
-  if (initialPlayers[0].isBot) {
-    setTimeout(() => get().handleBotTurn(), 1500);
-  }
 };
 
 const fleeFromBoss = (set: (state: any) => void, get: () => GameState) => {
@@ -820,6 +836,7 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
   } else {
     // Yeterli para varsa kirayı öde
     player.coins -= rentAmount;
+    player.rentPaid += rentAmount;
     owner.coins += rentAmount;
     owner.rentCollected += rentAmount;
 
@@ -874,6 +891,124 @@ const checkPlayerBankruptcy = (player: any, set?: (state: any) => void, get?: ()
   }
 };
 
+const handlePropertyPurchase = (playerId: string, propertyId: string, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const { players, squares } = state;
+
+  // Oyuncuyu bul
+  const player = players.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Mülkü bul
+  const squareIndex = squares.findIndex(sq => sq.property?.id === propertyId);
+  if (squareIndex === -1 || !squares[squareIndex].property) return;
+
+  const property = squares[squareIndex].property;
+
+  // Mülk fiyatını kontrol et
+  if (player.coins < property.price) {
+    get().showNotification({
+      title: 'Yetersiz Bakiye!',
+      message: 'Mülkü satın almak için yeterli bakiyeniz yok!',
+      type: 'error'
+    });
+    return;
+  }
+
+  // Mülkü satın al
+  player.coins -= property.price;
+  player.propertyPurchases += property.price;
+  player.properties.push(property);
+
+  // Mülkün sahibini güncelle
+  property.ownerId = playerId;
+
+  // Oyun durumunu güncelle
+  set({
+    players: [...players],
+    squares: [...squares]
+  });
+
+  // Bildirim göster
+  get().showNotification({
+    title: 'Mülk Satın Alındı!',
+    message: `${property.name} mülkü satın alındı!`,
+    type: 'success'
+  });
+};
+
+const upgradeProperty = (propertyId: string, set: (state: any) => void, get: () => GameState) => {
+  const { upgradeProperty } = handlePropertyActions(set, get);
+  upgradeProperty(propertyId);
+};
+
+const purchaseItem = (playerId: string, item: any, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const { players } = state;
+
+  // Oyuncuyu bul
+  const player = players.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Item fiyatını kontrol et
+  if (player.coins < item.price) {
+    get().showNotification({
+      title: 'Yetersiz Bakiye!',
+      message: 'Itemi satın almak için yeterli bakiyeniz yok!',
+      type: 'error'
+    });
+    return;
+  }
+
+  // Itemi satın al
+  player.coins -= item.price;
+  player.itemPurchases += item.price;
+  player.inventory[item.name] = (player.inventory[item.name] || 0) + 1;
+
+  // Oyun durumunu güncelle
+  set({
+    players: [...players]
+  });
+
+  // Bildirim göster
+  get().showNotification({
+    title: 'Item Satın Alındı!',
+    message: `${item.name} itemi satın alındı!`,
+    type: 'success'
+  });
+};
+
+const sellItem = (playerId: string, slotName: string, set: (state: any) => void, get: () => GameState) => {
+  const state = get();
+  const { players } = state;
+
+  // Oyuncuyu bul
+  const player = players.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Itemi bul
+  const item = player.inventory[slotName];
+  if (!item) return;
+
+  // Itemi sat
+  const sellPrice = Math.floor(item.price * 0.5);
+  player.coins += sellPrice;
+  player.itemSales += sellPrice;
+  player.inventory[slotName] -= 1;
+
+  // Oyun durumunu güncelle
+  set({
+    players: [...players]
+  });
+
+  // Bildirim göster
+  get().showNotification({
+    title: 'Item Satıldı!',
+    message: `${slotName} itemi satıldı!`,
+    type: 'success'
+  });
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   ...initialState,
   settings: loadSavedSettings(),
@@ -881,24 +1016,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   ...handleMarketActions(set, get),
   ...handleAllianceActions(set, get),
   ...handleBotActions(set, get),
-  ...handleCombatActions(set, get, (player, won) => {
-    if (won && get().activeBoss?.type === 'dragon') {
-      set(state => {
-        const updatedPlayers = state.players.map(p => {
-          if (p.id === player.id) {
-            const newDragonKills = (p.dragonKills || 0) + 1;
-            // Ejderha öldürme sayısı 3'e ulaştıysa ve özellik aktifse oyunu kazan
-            if (newDragonKills >= 3 && get().settings.dragonBossWinEnabled) {
-              setTimeout(() => set({ winner: p }), 0);
-            }
-            return { ...p, dragonKills: newDragonKills };
-          }
-          return p;
-        });
-        return { players: updatedPlayers };
-      });
-    }
-  }),
+  ...handleCombatActions(set, get),
   
   calculateItemBonuses,
   getBotMarketDecision,
@@ -934,7 +1052,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   initializeWeatherSystem: () => initializeWeatherSystem(set, get),
   handleBankruptcy: (playerId: string, rentAmount?: number, owner?: any) => handleBankruptcy(playerId, rentAmount, owner, set, get),
   payRent: (player: any, owner: any, rentAmount: number) => payRent(player, owner, rentAmount, set, get),
-  checkPlayerBankruptcy: (player: any) => checkPlayerBankruptcy(player, set, get)
+  checkPlayerBankruptcy: (player: any) => checkPlayerBankruptcy(player, set, get),
+  handlePropertyPurchase: (playerId: string, propertyId: string) => handlePropertyPurchase(playerId, propertyId, set, get),
+  upgradeProperty: (propertyId: string) => upgradeProperty(propertyId, set, get),
+  purchaseItem: (playerId: string, item: any) => purchaseItem(playerId, item, set, get),
+  sellItem: (playerId: string, slotName: string) => sellItem(playerId, slotName, set, get)
 }));
 
 export default useGameStore;

@@ -4,7 +4,8 @@ import { getPropertyIcon } from '../components/PropertyIcons';
 const boss: Boss = {
   id: 'dragon-1',
   name: 'Kadim Ejderha',
-  strength: 5,
+  type: 'dragon',
+  strength: 1,
   rewards: {
     gold: 500,
     xp: 200,

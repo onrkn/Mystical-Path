@@ -10,24 +10,27 @@ const PLAYER_COLORS = [
 ];
 
 export function calculateStrength(player: Player): number {
-  let strength = player.strength;
+  // Başlangıç gücü (eğer tanımlı değilse 1 olarak başla)
+  let strength = player.strength || 1;
 
-  // Add strength from properties
-  strength += player.properties.length;
+  // Mülklerden gelen güç (her mülk +1 güç verir)
+  strength += player.properties?.length || 0;
 
-  // Add strength from items
-  Object.values(player.inventory).forEach(item => {
-    if (!item) return;
-    
-    switch (item.rarity) {
-      case 'legendary':
-        strength += 2;
-        break;
-      case 'rare':
-        strength += 1;
-        break;
-    }
-  });
+  // Itemlerden gelen güç
+  if (player.inventory) {
+    Object.values(player.inventory).forEach(item => {
+      if (!item) return;
+      
+      switch (item.rarity) {
+        case 'legendary':
+          strength += 2;
+          break;
+        case 'rare':
+          strength += 1;
+          break;
+      }
+    });
+  }
 
   return strength;
 }

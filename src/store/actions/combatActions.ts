@@ -43,22 +43,53 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         player.coins += goldReward;
         player.xp += xpReward;
         player.cardBonuses += goldReward;
-        player.defeatedBosses = (player.defeatedBosses || 0) + 1; // Ejderha sayacını artır
+        player.defeatedBosses = (player.defeatedBosses || 0) + 1;
+
+        // Ejderha boss kontrolü
+        if (activeBoss.type === 'dragon') {
+          const newDragonKills = (player.dragonKills || 0) + 1;
+          player.dragonKills = newDragonKills;
+          
+          // Ejderha öldürme sayısı 3'e ulaştıysa ve özellik aktifse oyunu kazan
+          if (newDragonKills >= 3 && get().settings.dragonBossWinEnabled) {
+            get().showNotification({
+              title: 'Oyun Bitti!',
+              message: `${player.name} 3 ejderhayı yenerek oyunu kazandı!`,
+              type: 'success'
+            });
+            get().addToLog(`<span class="text-yellow-500">${player.name} 3 ejderhayı yenerek oyunu kazandı!</span>`);
+            setTimeout(() => set({ winner: player }), 0);
+          } else {
+            get().showNotification({
+              title: 'Ejderha Yenildi!',
+              message: `${player.name} ejderhayı yendi! (${newDragonKills}/3)`,
+              type: 'success'
+            });
+          }
+        }
 
         // Oyuncular listesini güncelle
         const updatedPlayers = players.map(p => 
-          p.id === player.id ? { ...p, defeatedBosses: player.defeatedBosses } : p
+          p.id === player.id ? { 
+            ...p,  
+            ...player,  
+          } : p
         );
 
-        // Show combat animation
-        set({ 
+        // Show combat animation ve state güncelleme
+        set((state) => ({ 
+          ...state,
           showCombatAnimation: { 
             visible: true, 
             won: true, 
             reward: { gold: goldReward, xp: xpReward } 
           },
-          players: updatedPlayers // Güncellenmiş oyuncular listesini kullan
-        });
+          players: updatedPlayers,
+          showBossDialog: false,
+          activeBoss: null,
+          waitingForDecision: false,
+          currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
+        }));
         setTimeout(() => set({ showCombatAnimation: { visible: false, won: true } }), 3000);
         
         if (activeBoss.rewards.item) {
@@ -94,13 +125,6 @@ export const handleCombatActions = (set: SetState<GameState>, get: GetState<Game
         get().addToLog(`<span class="text-red-500">${player.name} ejderhaya yenildi! (-${lostGold} altın)</span>`);
       }
       
-      set({
-        showBossDialog: false,
-        activeBoss: null,
-        waitingForDecision: false,
-        currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
-      });
-
       // If next player is bot and no dialogs are open, trigger bot turn
       const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
       if (nextPlayer.isBot && !get().showMarketDialog && !get().showPropertyDialog) {

@@ -84,32 +84,73 @@ export const handlePropertyActions = (set: SetState<GameState>, get: GetState<Ga
     }
   },
 
-  upgradeProperty: (propertyId: number) => {
-    const { players, currentPlayerIndex, settings } = get();
+  upgradeProperty: (propertyId: string) => {
+    console.log('upgradeProperty called with:', propertyId); // Debug log
+    const { players, currentPlayerIndex } = get();
     const currentPlayer = players[currentPlayerIndex];
-    const property = currentPlayer.properties.find(p => p.id === propertyId);
     
-    if (property && property.level < 5 && currentPlayer.coins >= 50) {
-      currentPlayer.coins -= 50;
-      currentPlayer.propertyUpgrades += 50;
-      property.level++;
-      
-      // Calculate new rent with level bonus
-      const levelBonus = 1 + (property.level * 0.2); // 20% increase per level
-      property.rent = calculateRent(property, get);
-      
-      // Upgrade price remains constant at 50
-      property.upgradePrice = 50;
-      
-      get().showNotification({
-        title: 'Mülk Geliştirildi',
-        message: `${currentPlayer.name} ${property.name}'yi geliştirdi! Yeni seviye: ${property.level}`,
-        type: 'success'
-      });
-      get().addToLog(`<span class="text-blue-500">${currentPlayer.name} ${property.name}'yi ${property.level}. seviyeye yükseltti!</span>`);
-      
-      set({ players: [...players] });
+    // Mülkü bul
+    const property = currentPlayer.properties.find(p => p.id === propertyId);
+    console.log('Found property:', property); // Debug log
+    
+    if (!property) {
+      console.error('Property not found:', propertyId);
+      return;
     }
+
+    if (property.level >= 5) {
+      get().showNotification({
+        title: 'Maksimum Seviye',
+        message: 'Bu mülk maksimum seviyeye ulaştı!',
+        type: 'error'
+      });
+      return;
+    }
+
+    const upgradePrice = property.upgradePrice || 50;
+    if (currentPlayer.coins < upgradePrice) {
+      get().showNotification({
+        title: 'Yetersiz Bakiye',
+        message: 'Mülkü geliştirmek için yeterli altınınız yok!',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Güncellemeleri yap
+    property.level++;
+    property.rent = calculateRent(property, get);
+    currentPlayer.coins -= upgradePrice;
+    currentPlayer.propertyUpgrades += upgradePrice;
+
+    // Güncellenmiş oyuncular listesini oluştur
+    const updatedPlayers = players.map(p => {
+      if (p.id === currentPlayer.id) {
+        return {
+          ...p,
+          coins: currentPlayer.coins,
+          propertyUpgrades: currentPlayer.propertyUpgrades,
+          properties: p.properties.map(prop => 
+            prop.id === property.id 
+              ? { ...prop, level: property.level, rent: property.rent }
+              : prop
+          )
+        };
+      }
+      return p;
+    });
+    
+    // State'i güncelle
+    set({ players: updatedPlayers });
+    console.log('State updated with:', updatedPlayers); // Debug log
+    
+    // Bildirimleri göster
+    get().showNotification({
+      title: 'Mülk Geliştirildi',
+      message: `${property.name} seviye ${property.level}'e yükseltildi!`,
+      type: 'success'
+    });
+    get().addToLog(`<span class="text-blue-500">${currentPlayer.name} ${property.name}'yi geliştirdi! (Seviye ${property.level})</span>`);
   },
 
   payRent: (player: GameState['players'][0], owner: GameState['players'][0], amount: number) => {

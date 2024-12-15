@@ -8,7 +8,6 @@ import { squares, king, BOARD_SIZE } from '../data/board';
 import { useGameStore } from '../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Gamepad2, 
   Dice5, 
   ScrollText, 
   Layers, 
@@ -200,9 +199,13 @@ export function GameBoard() {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500"></div>
             
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <Gamepad2 className="w-8 h-8 text-purple-500" />
-                <h3 className="text-2xl font-bold text-gray-800">Oyun Tahtası</h3>
+              <div className="flex items-center space-x-3 bg-purple-50 rounded-lg p-3 shadow-sm border border-purple-100">
+                <img 
+                  src="/board-game.png" 
+                  alt="Oyun Tahtası" 
+                  className="w-10 h-10 object-contain"
+                />
+                <h3 className="text-2xl font-bold text-purple-800">Oyun Tahtası</h3>
               </div>
               
               <div className="flex items-center gap-4">

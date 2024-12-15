@@ -95,7 +95,14 @@ export function PlayerStats() {
     <>
       <div className="bg-white p-4 rounded-xl shadow-md">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Oyuncular</h2>
+          <div className="flex items-center">
+            <img 
+              src="/ranking.png" 
+              alt="Oyuncu Sıralaması" 
+              className="w-6 h-6 mr-2"
+            />
+            <h2 className="text-xl font-semibold text-gray-900">Oyuncular</h2>
+          </div>
         </div>
         <div className="space-y-3">
           {players.map((player, index) => {

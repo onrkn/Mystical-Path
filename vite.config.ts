@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     port: 3000,
     fs: {
-      allow: ['C:/Users/bcuha/OneDrive/Masaüstü/mistik']
+      allow: ['C:/Users/onurk/Desktop/mistik']
     }
   }
 });

@@ -519,7 +519,8 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
       owner: propertyOwner,
       amount: rentAmount
     },
-    showRentDialog: true
+    showRentDialog: true,
+    currentPlayerIndex: (currentPlayerIndex + 1) % players.length
   });
 
   payRent(currentPlayer, propertyOwner, rentAmount, set, get);

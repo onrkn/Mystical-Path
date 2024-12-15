@@ -34,7 +34,8 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
       useGameStore.setState({
         showRentDialog: false,
         rentInfo: null,
-        waitingForDecision: false
+        waitingForDecision: false,
+        currentPlayerIndex: (useGameStore.getState().currentPlayerIndex + 1) % useGameStore.getState().players.length
       });
       
       return;
@@ -49,7 +50,8 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
       useGameStore.setState({
         showRentDialog: false,
         rentInfo: null,
-        waitingForDecision: false
+        waitingForDecision: false,
+        currentPlayerIndex: (useGameStore.getState().currentPlayerIndex + 1) % useGameStore.getState().players.length
       });
     } catch (error) {
       console.error('Kira ödeme hatası:', error);

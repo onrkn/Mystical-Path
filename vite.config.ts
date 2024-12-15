@@ -7,4 +7,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    port: 3000,
+    fs: {
+      allow: ['C:/Users/bcuha/OneDrive/Masaüstü/mistik']
+    }
+  }
 });

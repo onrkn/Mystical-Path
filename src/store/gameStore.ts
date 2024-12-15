@@ -523,18 +523,6 @@ const handlePropertyRent = (currentPlayer: any, square: any, set: (state: any) =
   });
 
   payRent(currentPlayer, propertyOwner, rentAmount, set, get);
-
-  set({
-    currentPlayerIndex: (currentPlayerIndex + 1) % players.length,
-    showRentDialog: false,
-    rentInfo: null,
-    waitingForDecision: false
-  });
-
-  const nextPlayer = players[(currentPlayerIndex + 1) % players.length];
-  if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-    setTimeout(() => get().handleBotTurn(), 1500);
-  }
 };
 
 const updateKingPosition = (position: number, set: (state: any) => void, get: () => GameState) => {
@@ -788,22 +776,6 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
       message: `${player.name} kirayı ödeyemedi ve oyundan elendi!`,
       type: 'error'
     });
-
-    const currentPlayerIndex = state.currentPlayerIndex;
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayer = players[nextPlayerIndex];
-
-    set({
-      players: [...players],
-      currentPlayerIndex: nextPlayerIndex,
-      showRentDialog: false,
-      rentInfo: null,
-      waitingForDecision: false
-    });
-
-    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-      setTimeout(() => get().handleBotTurn(), 1500);
-    }
   } else {
     player.coins -= rentAmount;
     player.rentPaid += rentAmount;
@@ -817,22 +789,6 @@ const payRent = (player: any, owner: any, rentAmount: number, set: (state: any) 
       message: `${player.name}, ${owner.name}'e ${rentAmount} altın kira ödedi!`,
       type: 'success'
     });
-
-    const currentPlayerIndex = state.currentPlayerIndex;
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayer = players[nextPlayerIndex];
-
-    set({
-      players: [...players],
-      currentPlayerIndex: nextPlayerIndex,
-      showRentDialog: false,
-      rentInfo: null,
-      waitingForDecision: false
-    });
-
-    if (nextPlayer.isBot && !nextPlayer.isBankrupt) {
-      setTimeout(() => get().handleBotTurn(), 1500);
-    }
   }
 };
 

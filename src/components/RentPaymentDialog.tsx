@@ -44,7 +44,13 @@ export const RentPaymentDialog = ({ property, owner, player }: RentPaymentDialog
     
     try {
       await payRent(player, owner, rentAmount, useGameStore.setState, useGameStore.getState);
-      // Dialog will be closed by the payRent action
+      
+      // Dialog'u kesinlikle kapat
+      useGameStore.setState({
+        showRentDialog: false,
+        rentInfo: null,
+        waitingForDecision: false
+      });
     } catch (error) {
       console.error('Kira ödeme hatası:', error);
     } finally {
